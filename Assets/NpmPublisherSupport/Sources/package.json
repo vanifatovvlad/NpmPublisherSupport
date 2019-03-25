@@ -1,0 +1,10 @@
+{
+  "name": "com.codewriter.npm-publisher-support",
+  "displayName": "Npm Publisher Support",
+  "description": "Package for publishing npm packages",
+  "version": "0.2.0",
+  "unity": "2018.3",
+  "license": "MIT",
+  "author": "VladV (https://github.com/vanifatovvlad)",
+  "dependencies": {}
+}
