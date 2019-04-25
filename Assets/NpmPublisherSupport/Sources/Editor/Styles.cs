@@ -6,6 +6,7 @@ namespace NpmPublisherSupport
     internal static class Styles
     {
         public static readonly GUIStyle CenteredLargeLabel;
+        public static readonly GUIStyle RightGrayLabel;
         public static readonly GUIStyle BigTitle;
         public static readonly GUIStyle BigTitleWithPadding;
 
@@ -25,6 +26,12 @@ namespace NpmPublisherSupport
             {
                 fontSize = 16,
                 alignment = TextAnchor.MiddleCenter
+            };
+
+            RightGrayLabel = new GUIStyle(EditorStyles.centeredGreyMiniLabel)
+            {
+                fontSize = 9,
+                alignment = TextAnchor.MiddleRight,
             };
         }
     }

@@ -18,12 +18,23 @@ namespace NpmPublisherSupport
             NpmPublishWindow.OpenPublish(packageJson);
         }
 
-        private static TextAsset GetSelectedPackageJson()
+        public static TextAsset GetSelectedPackageJson()
         {
             var selected = Selection.activeObject;
-            if (selected == null) return null;
+            return GetPackageJson(selected);
+        }
 
-            var path = AssetDatabase.GetAssetPath(selected);
+        public static TextAsset GetPackageJson(Object obj)
+        {
+            if (obj == null) return null;
+
+            var path = AssetDatabase.GetAssetPath(obj);
+            return GetPackageJson(path);
+        }
+
+        public static TextAsset GetPackageJson(string path)
+        {
+            if (path == null) return null;
             if (!path.StartsWith("Assets/")) return null;
             if (!AssetDatabase.IsValidFolder(path)) return null;
 

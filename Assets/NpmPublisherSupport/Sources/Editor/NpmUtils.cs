@@ -19,8 +19,8 @@ namespace NpmPublisherSupport
         {
             if (IsNpmRunning)
                 throw new InvalidOperationException("Npm instance already running");
-            
-            if(WorkingDirectory == null)
+
+            if (WorkingDirectory == null)
                 throw new InvalidOperationException("WorkingDirectory is null");
 
             var startInfo = new System.Diagnostics.ProcessStartInfo
@@ -69,6 +69,6 @@ namespace NpmPublisherSupport
                 launchProcess.BeginErrorReadLine();
                 launchProcess.EnableRaisingEvents = true;
             }
-        }     
+        }
     }
 }

@@ -13,6 +13,7 @@ namespace NpmPublisherSupport
             window.titleContent = new GUIContent("Npm Publish");
             window.minSize = new Vector2(500, 350);
             window.packageJson = packageJson;
+            window.RefreshImmediate();
             window.ShowUtility();
         }
 
@@ -125,7 +126,15 @@ namespace NpmPublisherSupport
         {
             GUILayout.Space(10);
 
+            GUILayout.BeginHorizontal();
             GUILayout.Label("Package.json", EditorStyles.boldLabel);
+            GUILayout.FlexibleSpace();
+            if (GUILayout.Button("Open", EditorStyles.miniButton))
+            {
+                AssetDatabase.OpenAsset(packageJson);
+            }
+
+            GUILayout.EndHorizontal();
             packageJsonScroll = GUILayout.BeginScrollView(packageJsonScroll, Styles.BigTitle);
             GUILayout.Label(packageJson.text);
             GUILayout.EndScrollView();
@@ -150,7 +159,10 @@ namespace NpmPublisherSupport
                     NpmUtils.ExecuteNpmCommand($"version patch", (code, result) => Refresh());
             }
 
-            EditorGUILayout.LabelField("Directory", directory);
+            GUILayout.BeginHorizontal();
+            EditorGUILayout.PrefixLabel("Directory");
+            EditorGUILayout.TextArea(directory, EditorStyles.wordWrappedLabel);
+            GUILayout.EndHorizontal();
 
             GUILayout.Space(10);
 
@@ -237,7 +249,7 @@ namespace NpmPublisherSupport
 
                 using (new GUILayout.HorizontalScope())
                 {
-                    GUILayout.Label("1. Open terminal and run");
+                    GUILayout.Label("2. Open terminal and run");
                     GUILayout.TextField($"npm adduser --registry {registry}");
                     GUILayout.FlexibleSpace();
                 }
