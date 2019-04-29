@@ -43,20 +43,13 @@ namespace NpmPublisherSupport
                     packageInfo.versions.latestCompatible);
             }
 
-            var localPackages = AssetDatabase.FindAssets("package t:TextAsset")
-                .Select(AssetDatabase.GUIDToAssetPath)
-                .Where(path => path.StartsWith("Assets/") && path.EndsWith("/package.json"))
-                .Select(AssetDatabase.LoadAssetAtPath<TextAsset>)
-                .ToList();
-            
+            var localPackages = FindLocalPackages();
             foreach (var localPackage in localPackages)
             {
                 try
                 {
-                    var package = (Dictionary<string, object>)MiniJSON.Json.Deserialize(localPackage.text);
-                    var packageName = (string)package["name"];
-                    var packageVersion = (string)package["version"];
-                    SetPackageVersion(packageName, PackageVersionType.Local, packageVersion);
+                    var package = JsonUtility.FromJson<Package>(localPackage.text);
+                    SetPackageVersion(package.name, PackageVersionType.Local, package.version);
                 }
                 catch (Exception ex)
                 {
@@ -66,6 +59,15 @@ namespace NpmPublisherSupport
 
             IsListed = true;
             callback.Invoke();
+        }
+
+        public static List<TextAsset> FindLocalPackages()
+        {
+            return AssetDatabase.FindAssets("package t:TextAsset")
+                .Select(AssetDatabase.GUIDToAssetPath)
+                .Where(path => path.StartsWith("Assets/") && path.EndsWith("/package.json"))
+                .Select(AssetDatabase.LoadAssetAtPath<TextAsset>)
+                .ToList();
         }
 
         public static string GetPackageVersion(string name, PackageVersionType type)

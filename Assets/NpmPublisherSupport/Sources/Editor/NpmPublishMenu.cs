@@ -49,7 +49,8 @@ namespace NpmPublisherSupport
 
                 NpmCommands.SetWorkingDirectory(asset);
                 NpmCommands.Publish((code, msg) =>
-                    Debug.Log($"NPM package {asset.name} published with {code} msg {msg}"));
+                    Debug.Log($"NPM package {asset.name} published with {code} msg {msg}"),
+                    NpmPublishWindow.Registry);
             }
         }
 
@@ -63,12 +64,10 @@ namespace NpmPublisherSupport
                 }
 
                 NpmCommands.SetWorkingDirectory(asset);
-                NpmCommands.UpdateVersion(
-                    (x, y) =>
-                    {
-                        NpmCommands.Publish((code, msg) =>
-                            Debug.Log($"NPM package {asset.name} published with {code} msg {msg}"));
-                    }, NpmVersion.Patch);
+                NpmCommands.UpdateVersion(asset, NpmVersion.Patch);
+                NpmCommands.Publish((code, msg) =>
+                    Debug.Log($"NPM package {asset.name} published with {code} msg {msg}"),
+                    NpmPublishWindow.Registry);
             }
         }
 

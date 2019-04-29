@@ -20,10 +20,16 @@ namespace NpmPublisherSupport
             window.Show();
         }
 
-        private string Registry
+        internal static string Registry
         {
             get => EditorPrefs.GetString("codewriter.npm-publisher-support.registry", "");
             set => EditorPrefs.SetString("codewriter.npm-publisher-support.registry", value);
+        }
+
+        internal static bool UpdateVersionRecursively
+        {
+            get => EditorPrefs.GetInt("codewriter.npm-publisher-support.update-recursively", 1) == 1;
+            set => EditorPrefs.SetInt("codewriter.npm-publisher-support.update-recursively", value ? 1 : 0);
         }
 
         [SerializeField] private TextAsset packageJson;
@@ -293,13 +299,16 @@ namespace NpmPublisherSupport
                 EditorGUILayout.PrefixLabel("Increment Version");
 
                 if (GUILayout.Button("Major 1.0.0", EditorStyles.miniButtonLeft))
-                    NpmCommands.UpdateVersion((code, result) => Refresh(), NpmVersion.Major);
+                    UpdateVersion(NpmVersion.Major);
 
                 if (GUILayout.Button("Minor 0.1.0", EditorStyles.miniButtonMid))
-                    NpmCommands.UpdateVersion((code, result) => Refresh(), NpmVersion.Minor);
+                    UpdateVersion(NpmVersion.Minor);
 
                 if (GUILayout.Button("Patch 0.0.1", EditorStyles.miniButtonRight))
-                    NpmCommands.UpdateVersion((code, result) => Refresh(), NpmVersion.Patch);
+                    UpdateVersion(NpmVersion.Patch);
+
+                UpdateVersionRecursively =
+                    GUILayout.Toggle(UpdateVersionRecursively, "Patch Dependents", EditorStyles.miniButton);
             }
 
             GUILayout.BeginHorizontal();
@@ -308,9 +317,31 @@ namespace NpmPublisherSupport
             GUILayout.EndHorizontal();
         }
 
+        private void UpdateVersion(NpmVersion version)
+        {
+            if (UpdateVersionRecursively)
+            {
+                NpmCommands.UpdateVersionRecursively(packageJson, version);
+            }
+            else
+            {
+                NpmCommands.UpdateVersion(packageJson, version);
+            }
+
+            RefreshImmediate();
+            UpmClientUtils.ListPackages(Refresh);
+        }
+
         private static bool ExtractPackageInfoFromJsonLine(string line, out string packageName,
             out string packageVersion)
         {
+            if (string.IsNullOrWhiteSpace(line))
+            {
+                packageName = null;
+                packageVersion = null;
+                return false;
+            }
+
             try
             {
                 line = line.Substring(line.IndexOf("\"", StringComparison.Ordinal) + 1);
