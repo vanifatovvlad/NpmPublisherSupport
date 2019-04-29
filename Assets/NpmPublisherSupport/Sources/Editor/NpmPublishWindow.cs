@@ -17,7 +17,7 @@ namespace NpmPublisherSupport
             window.ShowUtility();
         }
 
-        private string registry
+        private string Registry
         {
             get => EditorPrefs.GetString("codewriter.npm-publisher-support.registry", "");
             set => EditorPrefs.SetString("codewriter.npm-publisher-support.registry", value);
@@ -50,21 +50,11 @@ namespace NpmPublisherSupport
             package = JsonUtility.FromJson<Package>(packageJson.text);
         }
 
-        private void FetchDirectory()
-        {
-            var path = Application.dataPath;
-            path = path.Substring(0, path.Length - "Assets".Length);
-            path = path + AssetDatabase.GetAssetPath(packageJson);
-            var fileName = Path.GetFileName(path);
-            path = path.Substring(0, path.Length - fileName.Length);
-            directory = Path.GetFullPath(path);
-        }
-
         private void FetchUser()
         {
             user = string.Empty;
             userFetched = true;
-            NpmUtils.ExecuteNpmCommand($"whoami --registry {registry}", (code, result) =>
+            NpmUtils.ExecuteNpmCommand($"whoami --registry {Registry}", (code, result) =>
             {
                 if (code == 0)
                 {
@@ -79,7 +69,7 @@ namespace NpmPublisherSupport
         {
             GUI.enabled = !NpmUtils.IsNpmRunning;
 
-            if (string.IsNullOrEmpty(registry))
+            if (string.IsNullOrEmpty(Registry))
             {
                 DrawNoRegistry();
                 return;
@@ -92,7 +82,7 @@ namespace NpmPublisherSupport
 
             if (string.IsNullOrEmpty(directory))
             {
-                FetchDirectory();
+                directory = NpmCommands.GetPackageDirectory(packageJson);
             }
 
             NpmUtils.WorkingDirectory = directory;
@@ -150,13 +140,13 @@ namespace NpmPublisherSupport
                 EditorGUILayout.PrefixLabel("Increment Version");
 
                 if (GUILayout.Button("Major 1.0.0", EditorStyles.miniButtonLeft))
-                    NpmUtils.ExecuteNpmCommand($"version major", (code, result) => Refresh());
+                    NpmCommands.UpdateVersion((code, result) => Refresh(), NpmVersion.Major);
 
                 if (GUILayout.Button("Minor 0.1.0", EditorStyles.miniButtonMid))
-                    NpmUtils.ExecuteNpmCommand($"version minor", (code, result) => Refresh());
+                    NpmCommands.UpdateVersion((code, result) => Refresh(), NpmVersion.Minor);
 
                 if (GUILayout.Button("Patch 0.0.1", EditorStyles.miniButtonRight))
-                    NpmUtils.ExecuteNpmCommand($"version patch", (code, result) => Refresh());
+                    NpmCommands.UpdateVersion((code, result) => Refresh(), NpmVersion.Patch);
             }
 
             GUILayout.BeginHorizontal();
@@ -168,10 +158,11 @@ namespace NpmPublisherSupport
 
             if (GUILayout.Button("Publish", GUILayout.Height(24)))
             {
+                
                 var msg = $"Are you really want to publish package {package.name}?";
                 if (EditorUtility.DisplayDialog("Npm", msg, "Publish", "Cancel"))
                 {
-                    NpmUtils.ExecuteNpmCommand($"publish --registry {registry}", (code, result) => Refresh());
+                    NpmCommands.Publish((code, result) => Refresh(),Registry);
                 }
             }
         }
@@ -181,10 +172,10 @@ namespace NpmPublisherSupport
             using (new GUILayout.HorizontalScope(EditorStyles.toolbar))
             {
                 GUILayout.Label("Registry", EditorStyles.toolbarButton);
-                GUILayout.Label(registry, EditorStyles.toolbarButton);
+                GUILayout.Label(Registry, EditorStyles.toolbarButton);
                 if (GUILayout.Button("Edit", EditorStyles.toolbarButton))
                 {
-                    registry = string.Empty;
+                    Registry = string.Empty;
                     userFetched = false;
                     user = string.Empty;
                     RefreshImmediate();
@@ -215,7 +206,7 @@ namespace NpmPublisherSupport
                     GUILayout.FlexibleSpace();
                     if (GUILayout.Button("Confirm", GUILayout.Width(180), GUILayout.Height(24)))
                     {
-                        registry = registryInput;
+                        Registry = registryInput;
                         registryInput = string.Empty;
                     }
 
@@ -250,7 +241,7 @@ namespace NpmPublisherSupport
                 using (new GUILayout.HorizontalScope())
                 {
                     GUILayout.Label("2. Open terminal and run");
-                    GUILayout.TextField($"npm adduser --registry {registry}");
+                    GUILayout.TextField($"npm adduser --registry {Registry}");
                     GUILayout.FlexibleSpace();
                 }
 
