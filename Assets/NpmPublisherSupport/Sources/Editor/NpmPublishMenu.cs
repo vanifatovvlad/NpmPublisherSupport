@@ -1,9 +1,12 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using Unity.EditorCoroutines.Editor;
 using System.Linq;
 using UnityEditor;
+using UnityEditor.PackageManager;
 using UnityEngine;
+using Object = UnityEngine.Object;
 
 namespace NpmPublisherSupport
 {
@@ -12,6 +15,7 @@ namespace NpmPublisherSupport
         private const string PublishMenuItemPath = "Assets/Publish Npm Package";
         private const string PublishAllSelectedMenu = "Assets/NPM/Publish ALL Selected";
         private const string PatchAndPublishAllSelectedMenu = "Assets/NPM/Publish and Patch ALL Selected";
+        private const string PublishModifiedMenu = "Assets/NPM/Publish Modified";
         private static readonly string[] PackageJsonPaths = {"/package.json", "/Sources/package.json"};
 
         [MenuItem(PublishMenuItemPath, true)]
@@ -38,6 +42,69 @@ namespace NpmPublisherSupport
             EditorCoroutineUtility.StartCoroutineOwnerless(PatchAndPublish(packageJson));
         }
 
+        [MenuItem(PublishModifiedMenu, priority = 2100)]
+        public static void PublishModified()
+        {
+            EditorCoroutineUtility.StartCoroutineOwnerless(PublishModifiedRoutine());
+        }
+
+        public static IEnumerator PublishModifiedRoutine()
+        {
+            var toPublish = new Dictionary<TextAsset, Package>();
+
+            try
+            {
+                var search = Client.SearchAll();
+
+                int counter = 0;
+                while (!search.IsCompleted)
+                {
+                    counter++;
+                    var label = counter % 3 == 0 ? "Collecting info."
+                        : counter % 3 == 0 ? "Collecting info.."
+                        : "Collecting info...";
+                    EditorUtility.DisplayProgressBar("NPM Publish", label, 1f);
+                    yield return null;
+                }
+
+                var locals = UpmClientUtils.FindLocalPackages();
+
+                foreach (var localAsset in locals)
+                {
+                    var local = JsonUtility.FromJson<Package>(localAsset.text);
+                    var searched = search.Result.FirstOrDefault(o => o.name == local.name);
+
+                    if (searched == null || searched.versions.latest == local.version)
+                        continue;
+
+                    toPublish.Add(localAsset, local);
+                }
+            }
+            finally
+            {
+                EditorUtility.ClearProgressBar();
+            }
+
+            var message = $"Following packages would be published:" +
+                          toPublish.Aggregate("", (s, c) => s + $"{Environment.NewLine} - {c.Value.name}");
+
+            if (EditorUtility.DisplayDialog("Publish?", message, "Publish", "Cancel"))
+            {
+                foreach (var asset in toPublish)
+                {
+                    while (NpmUtils.IsNpmRunning)
+                    {
+                        yield return null;
+                    }
+
+                    NpmCommands.SetWorkingDirectory(asset.Key);
+                    NpmCommands.Publish((code, msg) =>
+                            Debug.Log($"NPM package {asset.Value.name} published with {code} msg {msg}"),
+                        NpmPublishWindow.Registry);
+                }
+            }
+        }
+
         public static IEnumerator PublishAll(List<TextAsset> assets)
         {
             foreach (var asset in assets)
@@ -49,7 +116,7 @@ namespace NpmPublisherSupport
 
                 NpmCommands.SetWorkingDirectory(asset);
                 NpmCommands.Publish((code, msg) =>
-                    Debug.Log($"NPM package {asset.name} published with {code} msg {msg}"),
+                        Debug.Log($"NPM package {asset.name} published with {code} msg {msg}"),
                     NpmPublishWindow.Registry);
             }
         }
@@ -66,7 +133,7 @@ namespace NpmPublisherSupport
                 NpmCommands.SetWorkingDirectory(asset);
                 NpmCommands.UpdateVersion(asset, NpmVersion.Patch);
                 NpmCommands.Publish((code, msg) =>
-                    Debug.Log($"NPM package {asset.name} published with {code} msg {msg}"),
+                        Debug.Log($"NPM package {asset.name} published with {code} msg {msg}"),
                     NpmPublishWindow.Registry);
             }
         }
