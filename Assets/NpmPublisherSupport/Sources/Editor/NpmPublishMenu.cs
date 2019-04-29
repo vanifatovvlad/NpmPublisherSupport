@@ -27,7 +27,7 @@ namespace NpmPublisherSupport
         public static void PublishAllSelected()
         {
             var packageJson = GetSelectedPackagesJson();
-            NpmCommands.PublishAllPackages(packageJson);
+            EditorCoroutineUtility.StartCoroutineOwnerless(PublishAll(packageJson));
         }
         
         [MenuItem(PatchAndPublishAllSelectedMenu, priority = 2000)]
@@ -37,6 +37,19 @@ namespace NpmPublisherSupport
             EditorCoroutineUtility.StartCoroutineOwnerless(PatchAndPublish(packageJson));
         }
 
+        public static IEnumerator PublishAll(List<TextAsset> assets)
+        {
+            foreach (var asset in assets)
+            {
+                while (NpmUtils.IsNpmRunning)
+                {
+                    yield return null;
+                }
+                NpmCommands.SetWorkingDirectory(asset);
+                NpmCommands.Publish((code,msg) => Debug.Log($"NPM package {asset.name} published with {code} msg {msg}"));
+            }
+        }
+        
         public static IEnumerator PatchAndPublish(List<TextAsset> assets)
         {
             foreach (var asset in assets)
