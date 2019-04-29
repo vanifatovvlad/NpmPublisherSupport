@@ -4,6 +4,8 @@ using UnityEngine;
 
 namespace NpmPublisherSupport
 {
+    public delegate void NpmCommandCallback(int? code, string result);
+
     internal static class NpmUtils
     {
         private static readonly StringBuilder Error = new StringBuilder();
@@ -11,7 +13,6 @@ namespace NpmPublisherSupport
 
         public static bool IsNpmRunning { get; private set; }
 
-        public delegate void NpmCommandCallback(int? code, string result);
 
         public static string WorkingDirectory { get; set; }
 
