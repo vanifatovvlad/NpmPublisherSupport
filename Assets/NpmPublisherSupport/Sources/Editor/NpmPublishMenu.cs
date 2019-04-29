@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using Unity.EditorCoroutines.Editor;
+using System.Linq;
 using UnityEditor;
 using UnityEngine;
 
@@ -22,17 +23,17 @@ namespace NpmPublisherSupport
             var packageJson = GetSelectedPackageJson();
             NpmPublishWindow.OpenPublish(packageJson);
         }
-        
+
         [MenuItem(PublishAllSelectedMenu, priority = 2000)]
         public static void PublishAllSelected()
         {
             var packageJson = GetSelectedPackagesJson();
             EditorCoroutineUtility.StartCoroutineOwnerless(PublishAll(packageJson));
         }
-        
+
         [MenuItem(PatchAndPublishAllSelectedMenu, priority = 2000)]
         public static void PatchAndPublishAllSelected()
-        {           
+        {
             var packageJson = GetSelectedPackagesJson();
             EditorCoroutineUtility.StartCoroutineOwnerless(PatchAndPublish(packageJson));
         }
@@ -45,11 +46,13 @@ namespace NpmPublisherSupport
                 {
                     yield return null;
                 }
+
                 NpmCommands.SetWorkingDirectory(asset);
-                NpmCommands.Publish((code,msg) => Debug.Log($"NPM package {asset.name} published with {code} msg {msg}"));
+                NpmCommands.Publish((code, msg) =>
+                    Debug.Log($"NPM package {asset.name} published with {code} msg {msg}"));
             }
         }
-        
+
         public static IEnumerator PatchAndPublish(List<TextAsset> assets)
         {
             foreach (var asset in assets)
@@ -58,13 +61,17 @@ namespace NpmPublisherSupport
                 {
                     yield return null;
                 }
+
                 NpmCommands.SetWorkingDirectory(asset);
-                NpmCommands.UpdateVersion((x, y) => {
-                    NpmCommands.Publish((code,msg) => Debug.Log($"NPM package {asset.name} published with {code} msg {msg}"));
-                },NpmVersion.Patch);
+                NpmCommands.UpdateVersion(
+                    (x, y) =>
+                    {
+                        NpmCommands.Publish((code, msg) =>
+                            Debug.Log($"NPM package {asset.name} published with {code} msg {msg}"));
+                    }, NpmVersion.Patch);
             }
         }
-        
+
         public static TextAsset GetSelectedPackageJson()
         {
             var selected = Selection.activeObject;
@@ -78,7 +85,7 @@ namespace NpmPublisherSupport
             var path = AssetDatabase.GetAssetPath(obj);
             return GetPackageJson(path);
         }
-        
+
         public static List<TextAsset> GetSelectedPackagesJson()
         {
             var result = new List<TextAsset>();
@@ -86,7 +93,7 @@ namespace NpmPublisherSupport
             foreach (var asset in selectedAssets)
             {
                 var textAsset = GetPackageJson(asset);
-                if(textAsset!=null && result.Contains(textAsset) == false)
+                if (textAsset != null && result.Contains(textAsset) == false)
                     result.Add(textAsset);
             }
 
@@ -97,12 +104,20 @@ namespace NpmPublisherSupport
         {
             if (path == null) return null;
             if (!path.StartsWith("Assets/")) return null;
+
+            TextAsset packageAsset;
+            if (path.EndsWith("/package.json") &&
+                (packageAsset = AssetDatabase.LoadAssetAtPath<TextAsset>(path)) != null)
+            {
+                return packageAsset;
+            }
+
             if (!AssetDatabase.IsValidFolder(path)) return null;
 
             foreach (var suffix in PackageJsonPaths)
             {
                 var packageJsonPath = path + suffix;
-                var packageAsset = AssetDatabase.LoadAssetAtPath<TextAsset>(packageJsonPath);
+                packageAsset = AssetDatabase.LoadAssetAtPath<TextAsset>(packageJsonPath);
                 if (packageAsset != null)
                 {
                     return packageAsset;

@@ -12,10 +12,9 @@ namespace NpmPublisherSupport
         Minor,
         Patch,
     }
-    
+
     public class NpmCommands
     {
-
         public static void Publish(NpmCommandCallback action, string registry = "")
         {
             if (string.IsNullOrEmpty(registry))
@@ -25,12 +24,11 @@ namespace NpmPublisherSupport
             else
             {
                 NpmUtils.ExecuteNpmCommand($"publish --registry {registry}", action);
-            }         
+            }
         }
 
-        public static void UpdateVersion(NpmCommandCallback action,NpmVersion version)
+        public static void UpdateVersion(NpmCommandCallback action, NpmVersion version)
         {
-            
             switch (version)
             {
                 case NpmVersion.Major:
@@ -47,6 +45,23 @@ namespace NpmPublisherSupport
             }
         }
 
+        public static void SetDependencyVersion(TextAsset package, string depName, string depVersion)
+        {
+            try
+            {
+                var json = (Dictionary<string, object>)MiniJSON.Json.Deserialize(package.text);
+                var depsJson = (Dictionary<string, object>) json["dependencies"];
+                depsJson[depName] = depVersion;
+
+                var packageContent = MiniJSON.Json.Serialize(json);
+                var path = AssetDatabase.GetAssetPath(package);
+                File.WriteAllText(path, packageContent);
+            }
+            catch (Exception ex)
+            {
+                Debug.LogException(ex);
+            }
+        }
 
         public static string GetPackageDirectory(TextAsset package)
         {
@@ -71,9 +86,8 @@ namespace NpmPublisherSupport
             foreach (var asset in package)
             {
                 SetWorkingDirectory(asset);
-                Publish((x,y) => Debug.Log($"PUBLISH {asset.name} CODE: {x} MSG: {y}"));             
+                Publish((x, y) => Debug.Log($"PUBLISH {asset.name} CODE: {x} MSG: {y}"));
             }
         }
     }
-    
 }

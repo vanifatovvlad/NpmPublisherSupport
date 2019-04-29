@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+
 namespace NpmPublisherSupport
 {
     using UnityEditor;
@@ -6,9 +8,11 @@ namespace NpmPublisherSupport
     [InitializeOnLoad]
     public static class NpmPublishProjectDrawer
     {
+        private static List<string> _paths = new List<string>();
+
         static NpmPublishProjectDrawer()
         {
-            //EditorApplication.projectWindowItemOnGUI += ProjectWindowItemOnGUI;
+            EditorApplication.projectWindowItemOnGUI += ProjectWindowItemOnGUI;
         }
 
         private static void ProjectWindowItemOnGUI(string guid, Rect selectionRect)
@@ -19,7 +23,21 @@ namespace NpmPublisherSupport
             var path = AssetDatabase.GUIDToAssetPath(guid);
             var packageJson = NpmPublishMenu.GetPackageJson(path);
             if (packageJson == null)
+            {
+                _paths.Remove(path);
                 return;
+            }
+
+            foreach (var existsPath in _paths)
+            {
+                if (path.Length != existsPath.Length && path.StartsWith(existsPath))
+                    return;
+            }
+
+            if (!_paths.Contains(path))
+            {
+                _paths.Add(path);
+            }
 
             var rect = new Rect(selectionRect)
             {
@@ -27,13 +45,7 @@ namespace NpmPublisherSupport
                 xMax = selectionRect.xMax - 4,
             };
 
-            var package = JsonUtility.FromJson<Package>(packageJson.text);
-            var content = new GUIContent("npm", package.name);
-
-            if (GUI.Button(rect, content, Styles.RightGrayLabel))
-            {
-                NpmPublishWindow.OpenPublish(packageJson);
-            }
+            GUI.Label(rect, "npm", Styles.RightGrayLabel);
         }
     }
 }
