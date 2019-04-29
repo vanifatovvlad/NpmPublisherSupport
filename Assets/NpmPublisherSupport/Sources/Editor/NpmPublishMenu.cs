@@ -1,4 +1,6 @@
+using System.Collections;
 using System.Collections.Generic;
+using Unity.EditorCoroutines.Editor;
 using UnityEditor;
 using UnityEngine;
 
@@ -30,18 +32,26 @@ namespace NpmPublisherSupport
         
         [MenuItem(PatchAndPublishAllSelectedMenu, priority = 2000)]
         public static void PatchAndPublishAllSelected()
-        {
+        {           
             var packageJson = GetSelectedPackagesJson();
-            foreach (var asset in packageJson)
+            EditorCoroutineUtility.StartCoroutineOwnerless(PatchAndPublish(packageJson));
+        }
+
+        public static IEnumerator PatchAndPublish(List<TextAsset> assets)
+        {
+            foreach (var asset in assets)
             {
+                while (NpmUtils.IsNpmRunning)
+                {
+                    yield return null;
+                }
                 NpmCommands.SetWorkingDirectory(asset);
                 NpmCommands.UpdateVersion((x, y) => {
                     NpmCommands.Publish((code,msg) => Debug.Log($"NPM package {asset.name} published with {code} msg {msg}"));
                 },NpmVersion.Patch);
             }
-            
         }
-
+        
         public static TextAsset GetSelectedPackageJson()
         {
             var selected = Selection.activeObject;

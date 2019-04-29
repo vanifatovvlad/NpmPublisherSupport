@@ -1,6 +1,8 @@
 {
     "name": "NpmPublisherSupport.Editor",
-    "references": [],
+    "references": [
+        "Unity.EditorCoroutines.Editor"
+    ],
     "optionalUnityReferences": [],
     "includePlatforms": [
         "Editor"

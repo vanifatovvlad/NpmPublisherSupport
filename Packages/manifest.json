@@ -1,5 +1,6 @@
 {
   "dependencies": {
+    "com.unity.editorcoroutines": "0.0.2-preview.1",
     "com.unity.package-manager-ui": "2.0.7",
     "com.unity.modules.ai": "1.0.0",
     "com.unity.modules.animation": "1.0.0",
