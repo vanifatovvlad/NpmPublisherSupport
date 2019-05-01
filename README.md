@@ -10,7 +10,7 @@ Publish Npm packages to your registry directly from the Unity
   * From Npm registry
   * From Local project (it’s convenient if several packages are located in one project)
 * Increment packages version from UnityEditor
-  * Patch Dependent option allow to automatically patch dependant packages version (If there are several projects in the project that depend on the current one)
+  * Patch Dependent option allow to automatically patch dependant packages version (If there are several packages in the project that depend on the current one)
 
 ## Getting started
 ### Step 1. Select registry
