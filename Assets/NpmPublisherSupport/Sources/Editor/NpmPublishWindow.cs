@@ -10,13 +10,16 @@ namespace NpmPublisherSupport
 {
     public class NpmPublishWindow : EditorWindow
     {
+        private static readonly GUIContent PatchDependentContent = new GUIContent("Patch Dependent",
+            "If on, version of dependant packages in this project will be automatically Patched");
+
         public static void OpenPublish(TextAsset packageJson)
         {
             var window = GetWindow<NpmPublishWindow>();
             window.titleContent = new GUIContent("Npm Publish");
             window.minSize = new Vector2(500, 350);
-            window.packageJson = packageJson;
-            window.RefreshImmediate();
+            window.packageAsset = packageJson;
+            window.RefreshImmediate(false);
             window.Show();
         }
 
@@ -32,31 +35,36 @@ namespace NpmPublisherSupport
             set => EditorPrefs.SetInt("codewriter.npm-publisher-support.update-recursively", value ? 1 : 0);
         }
 
-        [SerializeField] private TextAsset packageJson;
+        [SerializeField] private TextAsset packageAsset;
         [SerializeField] private bool userFetched;
         [SerializeField] private string user = "";
         [SerializeField] private string directory = "";
         [SerializeField] private Package package = new Package();
+        [SerializeField] private string[] packageJsonLines = new string[0];
 
         [SerializeField] private string registryInput = "";
         [SerializeField] private Vector2 packageJsonScroll;
 
-        private void Refresh() => EditorApplication.delayCall += RefreshImmediate;
+        private void Refresh(bool force) => EditorApplication.delayCall += () => RefreshImmediate(force);
 
-        private void RefreshImmediate()
+        private void RefreshImmediate(bool force)
         {
-            var path = AssetDatabase.GetAssetPath(packageJson);
-            AssetDatabase.Refresh();
-            AssetDatabase.ImportAsset(path);
-            packageJson = AssetDatabase.LoadAssetAtPath<TextAsset>(path);
+            var path = AssetDatabase.GetAssetPath(packageAsset);
+            if (force)
+            {
+                AssetDatabase.Refresh();
+                AssetDatabase.ImportAsset(path);
+            }
+
+            packageAsset = AssetDatabase.LoadAssetAtPath<TextAsset>(path);
             directory = string.Empty;
-            package = new Package();
-            Repaint();
-        }
+            package = JsonUtility.FromJson<Package>(packageAsset.text);
 
-        private void FetchPackageInfo()
-        {
-            package = JsonUtility.FromJson<Package>(packageJson.text);
+            var packageJsonObj = MiniJSON.Json.Deserialize(packageAsset.text);
+            var packageJsonFormatted = MiniJSON.Json.Serialize(packageJsonObj);
+            packageJsonLines = packageJsonFormatted.Split(new[] {Environment.NewLine}, StringSplitOptions.None);
+
+            Repaint();
         }
 
         private void FetchUser()
@@ -70,28 +78,41 @@ namespace NpmPublisherSupport
                     user = result.Trim();
                 }
 
-                Refresh();
+                Refresh(false);
             });
         }
 
         private void OnEnable()
         {
             Selection.selectionChanged += OnSelectionChanged;
+            NpmPublishAssetProcessor.PackageImported += PackageImported;
+
+            if (!UpmClientUtils.IsListed)
+            {
+                UpmClientUtils.ListPackages(() => Refresh(false));
+            }
         }
 
         private void OnDisable()
         {
             Selection.selectionChanged -= OnSelectionChanged;
+            NpmPublishAssetProcessor.PackageImported -= PackageImported;
         }
 
         private void OnSelectionChanged()
         {
             var newPackageJson = NpmPublishMenu.GetSelectedPackageJson();
-            if (newPackageJson != null && newPackageJson != packageJson)
+            if (newPackageJson != null && newPackageJson != packageAsset)
             {
-                packageJson = newPackageJson;
-                RefreshImmediate();
+                packageAsset = newPackageJson;
+                RefreshImmediate(false);
             }
+        }
+
+        private void PackageImported()
+        {
+            UpmClientUtils.ListLocalPackages();
+            Refresh(false);
         }
 
         private void OnGUI()
@@ -104,14 +125,9 @@ namespace NpmPublisherSupport
                 return;
             }
 
-            if (string.IsNullOrEmpty(package.name))
-            {
-                FetchPackageInfo();
-            }
-
             if (string.IsNullOrEmpty(directory))
             {
-                directory = NpmCommands.GetPackageDirectory(packageJson);
+                directory = NpmCommands.GetPackageDirectory(packageAsset);
             }
 
             NpmUtils.WorkingDirectory = directory;
@@ -144,10 +160,6 @@ namespace NpmPublisherSupport
         private void DrawContent()
         {
             GUILayout.Space(10);
-
-            DrawContentCheckUpm();
-            GUILayout.Space(10);
-
             DrawContentPackageJson();
             GUILayout.Space(10);
 
@@ -156,56 +168,47 @@ namespace NpmPublisherSupport
 
             if (GUILayout.Button("Publish", GUILayout.Height(24)))
             {
-                var msg = $"Are you really want to publish package {package.name}?";
+                var msg = $"Are you really want to publish package {package.name}: {package.version}?";
                 if (EditorUtility.DisplayDialog("Npm", msg, "Publish", "Cancel"))
                 {
-                    NpmCommands.Publish((code, result) => Refresh(), Registry);
+                    NpmCommands.Publish((code, result) =>
+                    {
+                        UpmClientUtils.ListPackages(() => Refresh(false));
+                    }, Registry);
                 }
             }
-        }
-
-        private void DrawContentCheckUpm()
-        {
-            if (!UpmClientUtils.IsListed)
-            {
-                UpmClientUtils.ListPackages(Refresh);
-            }
-
-            GUILayout.BeginHorizontal();
-            if (UpmClientUtils.IsListing)
-            {
-                GUILayout.Label("Checking UPM packages...");
-            }
-            else
-            {
-                GUILayout.FlexibleSpace();
-                if (GUILayout.Button("Check updates"))
-                {
-                    UpmClientUtils.ListPackages(Refresh);
-                }
-            }
-
-            GUILayout.EndHorizontal();
         }
 
         private void DrawContentPackageJson()
         {
             GUILayout.BeginHorizontal();
+            GUILayout.Label(package.displayName, Styles.HeaderDisplayNameLabel);
+            GUILayout.Label(package.version, Styles.HeaderVersionLabel);
+            GUILayout.FlexibleSpace();
+
+            if (GUILayout.Button("Check updates"))
+            {
+                UpmClientUtils.ListPackages(() => Refresh(false));
+            }
+
+            GUILayout.EndHorizontal();
+            GUILayout.Label(package.name, Styles.HeaderNameLabel);
+
+            GUILayout.BeginHorizontal();
             GUILayout.Label("Package.json", EditorStyles.boldLabel);
             GUILayout.FlexibleSpace();
             if (GUILayout.Button("Open", EditorStyles.miniButton))
             {
-                AssetDatabase.OpenAsset(packageJson);
+                AssetDatabase.OpenAsset(packageAsset);
             }
 
             GUILayout.EndHorizontal();
+            GUILayout.Space(3);
 
             packageJsonScroll = GUILayout.BeginScrollView(packageJsonScroll, Styles.BigTitle);
 
-            var packageLines = packageJson.text.Split('\n');
-
             bool dependenciesBlock = false;
-            foreach (var line in packageLines)
+            foreach (var line in packageJsonLines)
             {
                 if (line.Contains("}"))
                     dependenciesBlock = false;
@@ -225,7 +228,7 @@ namespace NpmPublisherSupport
                     GUILayout.Label(line, Styles.RichNoPaddingLabel);
                 }
 
-                if (line.Contains("\"dependencies\""))
+                if (line.Contains("\"dependencies\"") && line.Contains("{") && !line.Contains("}"))
                     dependenciesBlock = true;
             }
 
@@ -245,6 +248,7 @@ namespace NpmPublisherSupport
                     var localVersion = UpmClientUtils.GetPackageVersion(packageName, PackageVersionType.Local);
                     if (localVersion == "") // package not exists Locally
                     {
+                        GUILayout.Label("<color=#960012>Unknown</color>", Styles.RichNoPaddingLabel);
                         return;
                     }
 
@@ -257,8 +261,8 @@ namespace NpmPublisherSupport
                     // package can be updated to local version
                     if (GUILayout.Button($"LOCAL: Update to {localVersion}", EditorStyles.miniButton))
                     {
-                        NpmCommands.SetDependencyVersion(packageJson, packageName, localVersion);
-                        RefreshImmediate();
+                        NpmCommands.SetDependencyVersion(packageAsset, packageName, localVersion);
+                        RefreshImmediate(true);
                     }
 
                     return;
@@ -276,8 +280,8 @@ namespace NpmPublisherSupport
                     var msg = $"Are you really want to install package\n{packageName}: {latestVersion}";
                     if (EditorUtility.DisplayDialog("Package Manager", msg, "Install", "Cancel"))
                     {
-                        NpmCommands.SetDependencyVersion(packageJson, packageName, latestVersion);
-                        RefreshImmediate();
+                        NpmCommands.SetDependencyVersion(packageAsset, packageName, latestVersion);
+                        RefreshImmediate(true);
                         Client.Add($"{packageName}@{latestVersion}");
                     }
                 }
@@ -290,7 +294,6 @@ namespace NpmPublisherSupport
 
         private void DrawContentPackageInfo()
         {
-            GUILayout.Label("Package Info", EditorStyles.boldLabel);
             EditorGUILayout.LabelField("Name", package.name);
             EditorGUILayout.LabelField("Version", package.version);
 
@@ -298,17 +301,23 @@ namespace NpmPublisherSupport
             {
                 EditorGUILayout.PrefixLabel("Increment Version");
 
-                if (GUILayout.Button("Major 1.0.0", EditorStyles.miniButtonLeft))
+                var options = new[] {GUILayout.MaxWidth(110)};
+
+                if (GUILayout.Button("Major 1.0.0", EditorStyles.miniButtonLeft, options))
                     UpdateVersion(NpmVersion.Major);
 
-                if (GUILayout.Button("Minor 0.1.0", EditorStyles.miniButtonMid))
+                if (GUILayout.Button("Minor 0.1.0", EditorStyles.miniButtonMid, options))
                     UpdateVersion(NpmVersion.Minor);
 
-                if (GUILayout.Button("Patch 0.0.1", EditorStyles.miniButtonRight))
+                if (GUILayout.Button("Patch 0.0.1", EditorStyles.miniButtonRight, options))
                     UpdateVersion(NpmVersion.Patch);
 
+                GUILayout.Space(5);
+
                 UpdateVersionRecursively =
-                    GUILayout.Toggle(UpdateVersionRecursively, "Patch Dependents", EditorStyles.miniButton);
+                    GUILayout.Toggle(UpdateVersionRecursively, PatchDependentContent, EditorStyles.toggle);
+
+                GUILayout.FlexibleSpace();
             }
 
             GUILayout.BeginHorizontal();
@@ -321,15 +330,15 @@ namespace NpmPublisherSupport
         {
             if (UpdateVersionRecursively)
             {
-                NpmCommands.UpdateVersionRecursively(packageJson, version);
+                NpmCommands.UpdateVersionRecursively(packageAsset, version);
             }
             else
             {
-                NpmCommands.UpdateVersion(packageJson, version);
+                NpmCommands.UpdateVersion(packageAsset, version);
             }
 
-            RefreshImmediate();
-            UpmClientUtils.ListPackages(Refresh);
+            UpmClientUtils.ListLocalPackages();
+            Refresh(true);
         }
 
         private static bool ExtractPackageInfoFromJsonLine(string line, out string packageName,
@@ -372,7 +381,7 @@ namespace NpmPublisherSupport
                     Registry = string.Empty;
                     userFetched = false;
                     user = string.Empty;
-                    RefreshImmediate();
+                    RefreshImmediate(false);
                     return;
                 }
 

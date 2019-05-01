@@ -43,6 +43,14 @@ namespace NpmPublisherSupport
                     packageInfo.versions.latestCompatible);
             }
 
+            ListLocalPackages();
+
+            IsListed = true;
+            callback.Invoke();
+        }
+
+        public static void ListLocalPackages()
+        {
             var localPackages = FindLocalPackages();
             foreach (var localPackage in localPackages)
             {
@@ -56,9 +64,6 @@ namespace NpmPublisherSupport
                     Debug.LogException(ex);
                 }
             }
-
-            IsListed = true;
-            callback.Invoke();
         }
 
         public static List<TextAsset> FindLocalPackages()
@@ -76,7 +81,7 @@ namespace NpmPublisherSupport
         public static void SetPackageVersion(string name, PackageVersionType type, string version)
             => SessionState.SetString($"UpmClientUtils.{type}.{name}", version);
     }
-
+    
     public enum PackageVersionType
     {
         UpmLatest = 0,

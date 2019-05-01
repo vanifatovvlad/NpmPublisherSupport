@@ -520,6 +520,12 @@ namespace MiniJSON
 
             void SerializeObject(IDictionary obj, int depth)
             {
+                if (obj.Count == 0)
+                {
+                    builder.Append("{}");
+                    return;
+                }
+                
                 bool first = true;
 
                 builder.Append("{");
@@ -549,6 +555,12 @@ namespace MiniJSON
 
             void SerializeArray(IList anArray, int depth)
             {
+                if (anArray.Count == 0)
+                {
+                    builder.Append("[]");
+                    return;
+                }
+                
                 builder.Append("[");
                 builder.Append(Environment.NewLine);
 

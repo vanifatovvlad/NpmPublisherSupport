@@ -12,7 +12,7 @@ namespace NpmPublisherSupport
 {
     internal static class NpmPublishMenu
     {
-        private const string PublishMenuItemPath = "Assets/Publish Npm Package";
+        private const string PublishMenuItemPath = "Assets/View Npm Package";
         private const string PublishAllSelectedMenu = "Assets/NPM/Publish ALL Selected";
         private const string PatchAndPublishAllSelectedMenu = "Assets/NPM/Publish and Patch ALL Selected";
         private const string PublishModifiedMenu = "Assets/NPM/Publish Modified";
@@ -85,8 +85,9 @@ namespace NpmPublisherSupport
                 EditorUtility.ClearProgressBar();
             }
 
+            var nl = Environment.NewLine;
             var message = $"Following packages would be published:" +
-                          toPublish.Aggregate("", (s, c) => s + $"{Environment.NewLine} - {c.Value.name}");
+                          toPublish.Aggregate("", (s, c) => s + $"{nl} - {c.Value.name}: {c.Value.version}");
 
             if (EditorUtility.DisplayDialog("Publish?", message, "Publish", "Cancel"))
             {

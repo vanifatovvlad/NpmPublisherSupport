@@ -41,15 +41,17 @@ namespace NpmPublisherSupport
                     .ToList();
 
                 var packageJson = JsonUtility.FromJson<Package>(package.text);
-                var packageJsonVersion = SemVerHelper.GenerateVersion(packageJson.version, version);
+                var packageJsonNewVersion = SemVerHelper.GenerateVersion(packageJson.version, version);
 
                 var newVersions = new Dictionary<string, string>
                 {
-                    {packageJson.name, packageJsonVersion}
+                    {packageJson.name, packageJsonNewVersion}
                 };
 
-                localPackages.Single(o => o.package == package).json["version"] = packageJsonVersion;
+                localPackages.Single(o => o.package == package).json["version"] = packageJsonNewVersion;
 
+                var patchInfos = new List<Tuple<string, string, string>>();
+                
                 bool dirty = true;
                 int limit = 1000;
                 while (dirty && limit-- > 0)
@@ -74,9 +76,13 @@ namespace NpmPublisherSupport
 
                             if (!newVersions.ContainsKey(currentName))
                             {
+                                var oldVersion = currentVersion;
+                                
                                 currentVersion = SemVerHelper.GenerateVersion(currentVersion, NpmVersion.Patch);
                                 current.json["version"] = currentVersion;
                                 newVersions.Add(currentName, currentVersion);
+                                
+                                patchInfos.Add(Tuple.Create(currentName, oldVersion, currentVersion));
                             }
 
                             dirty = true;
@@ -91,8 +97,12 @@ namespace NpmPublisherSupport
                     return;
                 }
 
-                var msg = $"Following packages version would be updated:" +
-                          newVersions.Aggregate("", (s, c) => s + $"{Environment.NewLine} - {c.Key}: {c.Value}");
+                var nl = Environment.NewLine;
+                var msg = $"Following package version would be updated:" +
+                          $"{nl}- {packageJson.name}: {packageJson.version} -> {packageJsonNewVersion}" +
+                          $"{nl}" +
+                          $"{nl}Following dependent packages would be patched:" +
+                          patchInfos.Aggregate("", (s, c) => s + $"{nl}- {c.Item1}: {c.Item2} -> {c.Item3}");
 
                 if (EditorUtility.DisplayDialog("Update versions?", msg, "Update", "Cancel"))
                 {
@@ -122,14 +132,14 @@ namespace NpmPublisherSupport
                 var packageName = (string) json["name"];
                 var versionString = (string) json["version"];
 
-                versionString = SemVerHelper.GenerateVersion(versionString, version);
+                var newVersionString = SemVerHelper.GenerateVersion(versionString, version);
 
-                var msg = $"Following packages version would be updated:" +
-                          $"{Environment.NewLine} - {packageName}: {versionString}";
+                var msg = $"Following package version would be updated:" +
+                          $"{Environment.NewLine}- {packageName}: {versionString} -> {newVersionString}";
 
                 if (EditorUtility.DisplayDialog("Update version?", msg, "Update", "Cancel"))
                 {
-                    json["version"] = version;
+                    json["version"] = newVersionString;
 
                     var packageContent = MiniJSON.Json.Serialize(json);
                     var path = AssetDatabase.GetAssetPath(package);

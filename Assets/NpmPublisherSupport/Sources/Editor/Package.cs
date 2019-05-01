@@ -7,5 +7,6 @@ namespace NpmPublisherSupport
     {
         public string name = "";
         public string version = "";
+        public string displayName = "";
     }
 }
