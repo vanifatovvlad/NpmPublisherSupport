@@ -69,7 +69,7 @@ namespace NpmPublisherSupport
                         foreach (var newVer in newVersions)
                         {
                             if (!currentDepsJson.ContainsKey(newVer.Key) ||
-                                currentDepsJson[newVer.Key] == newVer.Value)
+                                (string)currentDepsJson[newVer.Key] == newVer.Value)
                                 continue;
 
                             currentDepsJson[newVer.Key] = newVer.Value;
