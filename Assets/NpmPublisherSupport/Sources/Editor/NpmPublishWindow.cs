@@ -8,7 +8,7 @@ using UnityEngine;
 
 namespace NpmPublisherSupport
 {
-    public class NpmPublishWindow : EditorWindow
+    public class NpmPublishWindow : EditorWindow, IHasCustomMenu
     {
         private static readonly GUIContent PatchDependentContent = new GUIContent("Patch Dependent",
             "If on, version of dependant packages in this project will be automatically Patched");
@@ -480,6 +480,16 @@ namespace NpmPublisherSupport
 
                 GUILayout.FlexibleSpace();
             }
+        }
+
+        void IHasCustomMenu.AddItemsToMenu(GenericMenu menu)
+        {
+            menu.AddItem(new GUIContent("Change Registry"), false, Logout);
+        }
+
+        private void Logout()
+        {
+            Registry = string.Empty;
         }
     }
 }
