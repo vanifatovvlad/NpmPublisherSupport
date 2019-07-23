@@ -28,6 +28,11 @@ namespace NpmPublisherSupport
                 return;
             }
 
+            if (!path.EndsWith("/"))
+            {
+                path += "/";
+            }
+
             foreach (var existsPath in _paths)
             {
                 if (path.Length != existsPath.Length && path.StartsWith(existsPath))
