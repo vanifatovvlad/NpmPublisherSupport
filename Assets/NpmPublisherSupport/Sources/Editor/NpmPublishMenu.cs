@@ -28,6 +28,9 @@ namespace NpmPublisherSupport
             NpmPublishWindow.OpenPublish(packageJson);
         }
 
+        [MenuItem(PublishAllSelectedMenu, true)]
+        public static bool CanPublishAllSelected() => !string.IsNullOrEmpty(NpmPublishWindow.Registry);
+
         [MenuItem(PublishAllSelectedMenu, priority = 2000)]
         public static void PublishAllSelected()
         {
@@ -35,12 +38,18 @@ namespace NpmPublisherSupport
             EditorCoroutineUtility.StartCoroutineOwnerless(PublishAll(packageJson));
         }
 
+        [MenuItem(PatchAndPublishAllSelectedMenu, true)]
+        public static bool CanPatchAndPublishAllSelected() => !string.IsNullOrEmpty(NpmPublishWindow.Registry);
+
         [MenuItem(PatchAndPublishAllSelectedMenu, priority = 2000)]
         public static void PatchAndPublishAllSelected()
         {
             var packageJson = GetSelectedPackagesJson();
             EditorCoroutineUtility.StartCoroutineOwnerless(PatchAndPublish(packageJson));
         }
+
+        [MenuItem(PublishModifiedMenu, true)]
+        public static bool CanPublishModifiedMenu() => !string.IsNullOrEmpty(NpmPublishWindow.Registry);
 
         [MenuItem(PublishModifiedMenu, priority = 2100)]
         public static void PublishModified()
