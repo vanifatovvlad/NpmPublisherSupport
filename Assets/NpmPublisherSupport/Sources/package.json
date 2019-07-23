@@ -2,10 +2,10 @@
   "name": "com.codewriter.npm-publisher-support",
   "displayName": "Npm Publisher Support",
   "description": "Publish Npm packages to your registry directly from the Unity",
-  "version": "0.3.2",
+  "version": "0.3.4",
   "unity": "2018.3",
   "license": "MIT",
-  "author": "VladV (https://github.com/vanifatovvlad)",
+  "author": "Vanifaatov Vlad (https://github.com/vanifatovvlad)",
   "homepage": "https://github.com/vanifatovvlad/NpmPublisherSupport#readme",
   "keywords": [
     "unity",
