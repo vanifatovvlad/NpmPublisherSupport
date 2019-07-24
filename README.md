@@ -60,11 +60,3 @@ Using NPM Publisher Support? Add a README badge to show it off: [![NPM Publisher
 [![NPM Publisher Support](https://img.shields.io/badge/maintained%20with-NPM%20Publisher%20Support-blue.svg)](https://github.com/vanifatovvlad/NpmPublisherSupport)
 ```
 
-## Requirement
-Unity 2019.1+
-
-## License
-MIT
-
-## Authors
-[Vanifatov Vlad](https://github.com/vanifatovvlad)
