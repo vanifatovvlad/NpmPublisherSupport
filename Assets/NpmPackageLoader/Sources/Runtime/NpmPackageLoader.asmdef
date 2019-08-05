@@ -1,0 +1,19 @@
+{
+    "name": "NpmPackageLoader",
+    "references": [],
+    "optionalUnityReferences": [],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [
+        {
+            "name": "com.codewriter.npm-publisher-support",
+            "expression": "0.0.1",
+            "define": "PUBLISHER_ENV"
+        }
+    ]
+}

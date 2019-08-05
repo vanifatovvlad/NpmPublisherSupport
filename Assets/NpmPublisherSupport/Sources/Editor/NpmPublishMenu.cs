@@ -13,8 +13,9 @@ namespace NpmPublisherSupport
     internal static class NpmPublishMenu
     {
         private const string PublishMenuItemPath = "Assets/View Npm Package";
-        private const string PublishAllSelectedMenu = "Assets/NPM/Publish ALL Selected";
-        private const string PatchAndPublishAllSelectedMenu = "Assets/NPM/Publish and Patch ALL Selected";
+
+        //private const string PublishAllSelectedMenu = "Assets/NPM/Publish ALL Selected";
+        //private const string PatchAndPublishAllSelectedMenu = "Assets/NPM/Publish and Patch ALL Selected";
         private const string PublishModifiedMenu = "Assets/NPM/Publish Modified";
         private static readonly string[] PackageJsonPaths = {"/package.json", "/Sources/package.json"};
 
@@ -28,6 +29,7 @@ namespace NpmPublisherSupport
             NpmPublishWindow.OpenPublish(packageJson);
         }
 
+        /*
         [MenuItem(PublishAllSelectedMenu, true)]
         public static bool CanPublishAllSelected() => !string.IsNullOrEmpty(NpmPublishWindow.Registry);
 
@@ -47,6 +49,7 @@ namespace NpmPublisherSupport
             var packageJson = GetSelectedPackagesJson();
             EditorCoroutineUtility.StartCoroutineOwnerless(PatchAndPublish(packageJson));
         }
+        */
 
         [MenuItem(PublishModifiedMenu, true)]
         public static bool CanPublishModifiedMenu() => !string.IsNullOrEmpty(NpmPublishWindow.Registry);
@@ -70,7 +73,7 @@ namespace NpmPublisherSupport
                 {
                     counter++;
                     var label = counter % 3 == 0 ? "Collecting info."
-                        : counter % 3 == 0 ? "Collecting info.."
+                        : counter % 3 == 1 ? "Collecting info.."
                         : "Collecting info...";
                     EditorUtility.DisplayProgressBar("NPM Publish", label, 1f);
                     yield return null;
@@ -98,23 +101,40 @@ namespace NpmPublisherSupport
             var message = $"Following packages would be published:" +
                           toPublish.Aggregate("", (s, c) => s + $"{nl} - {c.Value.name}: {c.Value.version}");
 
-            if (EditorUtility.DisplayDialog("Publish?", message, "Publish", "Cancel"))
+            if (!EditorUtility.DisplayDialog("Publish?", message, "Publish", "Cancel"))
+            {
+                yield break;
+            }
+
+            try
             {
                 foreach (var asset in toPublish)
                 {
+                    EditorUtility.DisplayProgressBar("Npm Publish", asset.Key.name, 1f);
+
                     while (NpmUtils.IsNpmRunning)
                     {
                         yield return null;
                     }
 
-                    NpmCommands.SetWorkingDirectory(asset.Key);
-                    NpmCommands.Publish((code, msg) =>
-                            Debug.Log($"NPM package {asset.Value.name} published with {code} msg {msg}"),
-                        NpmPublishWindow.Registry);
+                    bool done = false;
+                    NpmPublishCommand.Execute(asset.Key, () => done = true);
+
+                    while (!done)
+                    {
+                        yield return null;
+                    }
+                    
+                    Debug.Log("OK " + asset.Key);
                 }
+            }
+            finally
+            {
+                EditorUtility.ClearProgressBar();
             }
         }
 
+        /*
         public static IEnumerator PublishAll(List<TextAsset> assets)
         {
             foreach (var asset in assets)
@@ -147,6 +167,7 @@ namespace NpmPublisherSupport
                     NpmPublishWindow.Registry);
             }
         }
+        */
 
         public static TextAsset GetSelectedPackageJson()
         {
@@ -161,7 +182,7 @@ namespace NpmPublisherSupport
             var path = AssetDatabase.GetAssetPath(obj);
             return GetPackageJson(path);
         }
-
+        /*
         public static List<TextAsset> GetSelectedPackagesJson()
         {
             var result = new List<TextAsset>();
@@ -175,6 +196,7 @@ namespace NpmPublisherSupport
 
             return result;
         }
+        */
 
         public static TextAsset GetPackageJson(string path)
         {

@@ -28,6 +28,11 @@ namespace NpmPublisherSupport
             }
         }
 
+        public static void UpdatePatchVersionRecursively(TextAsset package)
+        {
+            UpdateVersionRecursively(package, NpmVersion.Patch);
+        }
+
         public static void UpdateVersionRecursively(TextAsset package, NpmVersion version)
         {
             try
@@ -167,6 +172,28 @@ namespace NpmPublisherSupport
             catch (Exception ex)
             {
                 Debug.LogException(ex);
+            }
+        }
+        
+        public static string GetDependencyVersion(TextAsset package, string depName)
+        {
+            try
+            {
+                var json = (Dictionary<string, object>) MiniJSON.Json.Deserialize(package.text);
+
+                if (!json.ContainsKey("dependencies"))
+                    return null;
+                
+                var depsJson = (Dictionary<string, object>) json["dependencies"];
+                if (!depsJson.ContainsKey(depName))
+                    return null;
+                
+                return (string)depsJson[depName];
+            }
+            catch (Exception ex)
+            {
+                Debug.LogException(ex);
+                return null;
             }
         }
 

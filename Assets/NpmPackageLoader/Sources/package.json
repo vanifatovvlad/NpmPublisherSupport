@@ -1,0 +1,11 @@
+{
+  "name": "com.greenbuttongames.npm-package-loader",
+  "displayName": "Npm Package Loader",
+  "description": "External dependencies downloader for npm packages",
+  "version": "0.1.19",
+  "unity": "2019.1",
+  "license": "MIT",
+  "author": "Vanifatov Vlad (https://github.com/vanifatovvlad)",
+  "homepage": "https://github.com/vanifatovvlad/NpmPublisherSupport#readme",
+  "dependencies": {}
+}

@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
+using NpmPackageLoader;
 using UnityEditor;
 using UnityEditor.PackageManager;
 using UnityEditor.PackageManager.Requests;
@@ -41,6 +43,7 @@ namespace NpmPublisherSupport
         [SerializeField] private string directory = "";
         [SerializeField] private Package package = new Package();
         [SerializeField] private string[] packageJsonLines = new string[0];
+        [SerializeField] private List<Loader> packageExternalLoaders = new List<Loader>();
 
         [SerializeField] private string registryInput = "";
         [SerializeField] private Vector2 packageJsonScroll;
@@ -63,6 +66,12 @@ namespace NpmPublisherSupport
             var packageJsonObj = MiniJSON.Json.Deserialize(packageAsset.text);
             var packageJsonFormatted = MiniJSON.Json.Serialize(packageJsonObj);
             packageJsonLines = packageJsonFormatted.Split(new[] {Environment.NewLine}, StringSplitOptions.None);
+
+            packageExternalLoaders = AssetDatabase
+                .FindAssets($"t:{typeof(Loader).FullName}", new[] {Path.GetDirectoryName(path)})
+                .Select(AssetDatabase.GUIDToAssetPath)
+                .Select(AssetDatabase.LoadAssetAtPath<Loader>)
+                .ToList();
 
             Repaint();
         }
@@ -166,17 +175,25 @@ namespace NpmPublisherSupport
             DrawContentPackageInfo();
             GUILayout.Space(10);
 
+            DrawPackageExternalLoaders();
+            GUILayout.Space(10);
+
             if (GUILayout.Button("Publish", GUILayout.Height(24)))
             {
-                var msg = $"Are you really want to publish package {package.name}: {package.version}?";
-                if (EditorUtility.DisplayDialog("Npm", msg, "Publish", "Cancel"))
-                {
-                    NpmCommands.Publish((code, result) =>
-                    {
-                        UpmClientUtils.ListPackages(() => Refresh(false));
-                    }, Registry);
-                }
+                DoPublish();
             }
+        }
+
+        private void DoPublish()
+        {
+            var msg = $"Are you really want to publish package {package.name}: {package.version}?";
+            if (!EditorUtility.DisplayDialog("Npm", msg, "Publish", "Cancel")) return;
+
+            NpmPublishCommand.Execute(packageAsset, () =>
+            {
+                //
+                UpmClientUtils.ListPackages(() => Refresh(false));
+            });
         }
 
         private void DrawContentPackageJson()
@@ -324,6 +341,51 @@ namespace NpmPublisherSupport
             EditorGUILayout.PrefixLabel("Directory");
             EditorGUILayout.TextArea(directory, EditorStyles.wordWrappedLabel);
             GUILayout.EndHorizontal();
+        }
+
+        private void DrawPackageExternalLoaders()
+        {
+            const string NpmPackageLoader = "com.greenbuttongames.npm-package-loader";
+
+            if (packageExternalLoaders.Count == 0)
+                return;
+
+            GUILayout.Label("External loaders", EditorStyles.boldLabel);
+
+            var loaderPackageVersion = NpmCommands.GetDependencyVersion(packageAsset, NpmPackageLoader);
+
+            if (loaderPackageVersion == null)
+            {
+                var version = UpmClientUtils.GetPackageVersion(NpmPackageLoader, PackageVersionType.UpmLatest);
+
+                if (string.IsNullOrEmpty(version))
+                {
+                    version = UpmClientUtils.GetPackageVersion(NpmPackageLoader, PackageVersionType.Local);
+                }
+
+                GUILayout.Space(10);
+                GUILayout.BeginHorizontal();
+                EditorGUILayout.HelpBox($"Missing {NpmPackageLoader}:{version} dependency", MessageType.Error);
+                if (GUILayout.Button("Add", GUILayout.Height(40)))
+                {
+                    NpmCommands.SetDependencyVersion(packageAsset, NpmPackageLoader, version);
+                    Refresh(true);
+                }
+
+                GUILayout.EndHorizontal();
+                GUILayout.Space(10);
+            }
+
+            GUILayout.BeginVertical(Styles.BigTitle);
+            foreach (var loader in packageExternalLoaders)
+            {
+                EditorGUILayout.ObjectField(loader, typeof(Loader), false);
+            }
+
+            //     "com.greenbuttongames.npm-package-loader": "0.1.9"
+
+
+            GUILayout.EndVertical();
         }
 
         private void UpdateVersion(NpmVersion version)
