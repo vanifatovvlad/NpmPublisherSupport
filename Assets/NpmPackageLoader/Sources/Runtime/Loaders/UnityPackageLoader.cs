@@ -17,9 +17,9 @@ namespace NpmPackageLoader.Loaders
         public string[] PackedObjects => packedObjects;
 
 #if UNITY_EDITOR
-        protected void Export(TextAsset packageJsonAsset, string exportPath, Action success, Action fail)
+        protected void ExportUnityPackage(TextAsset packageJsonAsset, string exportPath, Action success, Action fail)
         {
-            Try(fail, () =>
+            ExecuteAction(() =>
             {
                 EditorUtility.DisplayProgressBar("Export Loader", name, 1f);
 
@@ -30,8 +30,7 @@ namespace NpmPackageLoader.Loaders
                 var packageJson = JsonUtility.FromJson<PackageJson>(packageJsonAsset.text);
 
                 var embedPackageJsonPath = $"{Application.dataPath}/Packages/{packageJson.name}/{name}.json";
-                var embedPackageJsonDirectory = Path.GetDirectoryName(embedPackageJsonPath);
-                if (embedPackageJsonDirectory == null) return;
+                var embedPackageJsonDirectory = Path.GetDirectoryName(embedPackageJsonPath) ?? String.Empty;
 
                 if (!Directory.Exists(embedPackageJsonDirectory))
                 {
@@ -51,7 +50,7 @@ namespace NpmPackageLoader.Loaders
                 AssetDatabase.ExportPackage(packedAssetsPaths, exportPath, ExportPackageOptions.Recurse);
 
                 success();
-            });
+            }, fail);
         }
 #endif
     }

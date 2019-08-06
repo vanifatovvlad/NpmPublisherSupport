@@ -24,26 +24,26 @@ namespace NpmPackageLoader.Loaders
 
         public override void Import(TextAsset packageJsonAsset, Action success, Action fail)
         {
-            Try(fail, () =>
+            ExecuteAction(() =>
             {
                 var unityPackagePath = GetUnityPackagePath();
                 AssetDatabase.ImportPackage(unityPackagePath, true);
                 success();
-            });
+            }, fail);
         }
 
         public override void Export(TextAsset packageJsonAsset, Action success, Action fail)
         {
-            Try(fail, () =>
+            ExecuteAction(() =>
             {
                 var unityPackagePath = GetUnityPackagePath();
 
-                Export(packageJsonAsset, unityPackagePath, () =>
+                ExportUnityPackage(packageJsonAsset, unityPackagePath, () =>
                 {
                     AssetDatabase.ImportAsset(unityPackagePath);
                     success();
                 }, fail);
-            });
+            }, fail);
         }
 
 #endif

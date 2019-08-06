@@ -28,7 +28,7 @@ namespace NpmPackageLoader.Loaders
 
         public override void Import(TextAsset packageJsonAsset, Action success, Action fail)
         {
-            Try(fail, () =>
+            ExecuteAction(() =>
             {
                 var packageJson = JsonUtility.FromJson<PackageJson>(packageJsonAsset.text);
                 var unityPackageFile = GetTempUnityPackagePath();
@@ -49,7 +49,7 @@ namespace NpmPackageLoader.Loaders
                     AssetDatabase.ImportPackage(unityPackageFile, true);
                     success();
                 }, fail);
-            });
+            }, fail);
         }
 
         public override void Export(TextAsset packageJsonAsset, Action success, Action fail)
@@ -59,18 +59,18 @@ namespace NpmPackageLoader.Loaders
             EditorUtility.SetDirty(this);
             AssetDatabase.Refresh();
 
-            Try(fail, () =>
+            ExecuteAction(() =>
             {
                 var packageJson = JsonUtility.FromJson<PackageJson>(packageJsonAsset.text);
                 var unityPackageFile = GetTempUnityPackagePath();
 
-                Export(packageJsonAsset, unityPackageFile, () =>
+                ExportUnityPackage(packageJsonAsset, unityPackageFile, () =>
                 {
                     writePassword = writePass;
                     EditorUtility.SetDirty(this);
                     AssetDatabase.Refresh();
 
-                    FtpUtils.Upload(new FtpData
+                    var data = new FtpData
                     {
                         Url = url,
                         User = user,
@@ -79,9 +79,11 @@ namespace NpmPackageLoader.Loaders
                         PackageName = packageJson.name,
                         PackageVersion = packageJson.version,
                         UnityPackageName = name,
-                    }, success, fail);
+                    };
+
+                    FtpUtils.Upload(data, success, fail);
                 }, fail);
-            });
+            }, fail);
         }
 #endif
     }

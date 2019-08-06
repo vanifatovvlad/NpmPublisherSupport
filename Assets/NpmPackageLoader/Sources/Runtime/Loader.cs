@@ -5,11 +5,12 @@ namespace NpmPackageLoader
 {
     public abstract class Loader : ScriptableObject
     {
+#if UNITY_EDITOR
         public virtual void Export(TextAsset packageJsonAsset, Action success, Action fail) => fail();
 
         public virtual void Import(TextAsset packageJsonAsset, Action success, Action fail) => fail();
 
-        protected void Try(Action onFail, Action action)
+        protected void ExecuteAction(Action action, Action fail)
         {
             try
             {
@@ -18,8 +19,9 @@ namespace NpmPackageLoader
             catch (Exception e)
             {
                 Debug.LogException(e);
-                onFail();
+                fail();
             }
         }
+#endif
     }
 }

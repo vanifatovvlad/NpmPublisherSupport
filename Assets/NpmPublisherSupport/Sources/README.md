@@ -1,4 +1,4 @@
-# Npm Publisher Support [![Github license](https://img.shields.io/github/license/vanifatovvlad/NpmPublisherSupport.svg)](#)  [![upm version](https://img.shields.io/github/package-json/v/vanifatovvlad/NpmPublisherSupport.svg)](#) [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](#) [![Stars](https://img.shields.io/github/stars/vanifatovvlad/NpmPublisherSupport.svg?style=social)](https://github.com/vanifatovvlad/NpmPublisherSupport/stargazers) [![Watchers](https://img.shields.io/github/watchers/vanifatovvlad/NpmPublisherSupport.svg?style=social)](https://github.com/vanifatovvlad/NpmPublisherSupport/watchers)
+# Npm Publisher Support [![Stars](https://img.shields.io/github/stars/vanifatovvlad/NpmPublisherSupport.svg?style=social)](https://github.com/vanifatovvlad/NpmPublisherSupport/stargazers) [![Watchers](https://img.shields.io/github/watchers/vanifatovvlad/NpmPublisherSupport.svg?style=social)](https://github.com/vanifatovvlad/NpmPublisherSupport/watchers)
 
 A tool for managing Unity projects with multiple UnityPackageManager packages.
 <br/>
@@ -60,11 +60,3 @@ Using NPM Publisher Support? Add a README badge to show it off: [![NPM Publisher
 [![NPM Publisher Support](https://img.shields.io/badge/maintained%20with-NPM%20Publisher%20Support-blue.svg)](https://github.com/vanifatovvlad/NpmPublisherSupport)
 ```
 
-## Requirement
-Unity 2019.1+
-
-## License
-MIT
-
-## Authors
-[Vanifatov Vlad](https://github.com/vanifatovvlad)

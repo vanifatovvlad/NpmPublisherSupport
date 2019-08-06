@@ -71,25 +71,22 @@ namespace NpmPackageLoader
                     continue;
 
                 var installOrUpdate = embedPackageJson == null ? "Install" : "Update";
-                var message = $"'{packageJson.name}' package require import '{loaderName}'";
+                var message = $"'{packageJson.name}:{packageJson.version}' " +
+                              $"require download additional unitypackage '{loaderName}'";
 
                 if (!EditorUtility.DisplayDialog("Npm Package Loader", message, installOrUpdate, "Cancel"))
                     continue;
 
-                var packageJsonAsset = AssetDatabase.LoadAssetAtPath<TextAsset>(packageJsonPath);
-
                 Checked = false;
 
+                var packageJsonAsset = AssetDatabase.LoadAssetAtPath<TextAsset>(packageJsonPath);
                 var loader = AssetDatabase.LoadAssetAtPath<Loader>(loaderPath);
-                loader.Import(packageJsonAsset, () =>
-                {
-                    //
-                    Debug.Log("Success");
-                }, () =>
-                {
-                    //
-                    Debug.LogError("fail");
-                });
+
+                loader.Import(packageJsonAsset,
+                    () => Debug.Log("Success"),
+                    () => Debug.LogError("fail")
+                );
+
                 return;
             }
 

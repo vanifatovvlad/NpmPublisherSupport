@@ -1,11 +1,10 @@
 using System;
 using System.Collections.Generic;
-using NpmPackageLoader.Loaders;
 using UnityEditor;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
-namespace NpmPublisherSupport.Loaders.LoaderEditors
+namespace NpmPackageLoader.Loaders
 {
 #if PUBLISHER_ENV
     [CustomEditor(typeof(UnityPackageLoader), true)]
@@ -52,7 +51,6 @@ namespace NpmPublisherSupport.Loaders.LoaderEditors
 
             serializedObject.ApplyModifiedProperties();
         }
-
 
         private void DrawPackedAssets()
         {
@@ -111,20 +109,6 @@ namespace NpmPublisherSupport.Loaders.LoaderEditors
         }
     }
 #endif
-
-    internal struct GUIEnableScope : IDisposable
-    {
-        private readonly bool _enabled;
-
-        public GUIEnableScope(bool enabled)
-        {
-            _enabled = GUI.enabled;
-            if (GUI.enabled)
-                GUI.enabled = enabled;
-        }
-
-        public void Dispose() => GUI.enabled = _enabled;
-    }
 
     internal struct GUIColorScope : IDisposable
     {

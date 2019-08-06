@@ -1,4 +1,4 @@
-# Npm Publisher Support [![Github license](https://img.shields.io/github/license/vanifatovvlad/NpmPublisherSupport.svg)](#)  [![upm version](https://img.shields.io/github/package-json/v/vanifatovvlad/NpmPublisherSupport.svg)](#) [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](#) [![Stars](https://img.shields.io/github/stars/vanifatovvlad/NpmPublisherSupport.svg?style=social)](https://github.com/vanifatovvlad/NpmPublisherSupport/stargazers) [![Watchers](https://img.shields.io/github/watchers/vanifatovvlad/NpmPublisherSupport.svg?style=social)](https://github.com/vanifatovvlad/NpmPublisherSupport/watchers)
+# Npm Publisher Support [![Stars](https://img.shields.io/github/stars/vanifatovvlad/NpmPublisherSupport.svg?style=social)](https://github.com/vanifatovvlad/NpmPublisherSupport/stargazers) [![Watchers](https://img.shields.io/github/watchers/vanifatovvlad/NpmPublisherSupport.svg?style=social)](https://github.com/vanifatovvlad/NpmPublisherSupport/watchers)
 
 A tool for managing Unity projects with multiple UnityPackageManager packages.
 <br/>

@@ -45,16 +45,17 @@ namespace NpmPackageLoader
 
                 _request.UploadProgressChanged += (sender, args) =>
                 {
-                    var progress = 1f * args.BytesSent / args.TotalBytesToSend;
-                    EditorUtility.DisplayProgressBar(progressHeader, remoteVersionDir, progress);
+                    EditorUtility.DisplayProgressBar(progressHeader, ToKiloBytes(args.BytesSent),
+                        args.ProgressPercentage / 100f);
                 };
 
                 _request.UploadFileCompleted += (sender, args) =>
                 {
-                    EditorUtility.ClearProgressBar();
-
                     // ReSharper disable once AccessToDisposedClosure
                     _request.Dispose();
+                    _request = null;
+
+                    EditorUtility.ClearProgressBar();
 
                     if (args.Error != null)
                     {
@@ -72,6 +73,7 @@ namespace NpmPackageLoader
             }
             catch (Exception ex)
             {
+                EditorUtility.ClearProgressBar();
                 Debug.LogException(ex);
                 _request?.Dispose();
 
@@ -93,16 +95,17 @@ namespace NpmPackageLoader
 
                 _request.DownloadProgressChanged += (sender, args) =>
                 {
-                    var progress = 1f * args.BytesReceived / args.TotalBytesToReceive;
-                    EditorUtility.DisplayProgressBar(progressHeader, remoteVersionDir, progress);
+                    EditorUtility.DisplayProgressBar(progressHeader, ToKiloBytes(args.BytesReceived),
+                        args.ProgressPercentage / 100f);
                 };
 
                 _request.DownloadFileCompleted += (sender, args) =>
                 {
-                    EditorUtility.ClearProgressBar();
-
                     // ReSharper disable once AccessToDisposedClosure
                     _request.Dispose();
+                    _request = null;
+
+                    EditorUtility.ClearProgressBar();
 
                     if (args.Error != null)
                     {
@@ -120,12 +123,12 @@ namespace NpmPackageLoader
             }
             catch (Exception ex)
             {
+                EditorUtility.ClearProgressBar();
                 Debug.LogException(ex);
                 _request?.Dispose();
                 fail();
             }
         }
-
 
         private static void CreateDirectoryIfNotExists(string url, FtpData data)
         {
@@ -144,6 +147,11 @@ namespace NpmPackageLoader
             {
                 // already exist
             }
+        }
+
+        private static string ToKiloBytes(long bytes)
+        {
+            return (bytes / 1024) + "Kb";
         }
     }
 }
