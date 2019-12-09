@@ -175,8 +175,15 @@ namespace NpmPublisherSupport
             DrawContentPackageInfo();
             GUILayout.Space(10);
 
-            DrawPackageExternalLoaders();
-            GUILayout.Space(10);
+            if (DrawPackageExternalLoaders())
+            {
+                GUILayout.Space(10);
+            }
+
+            if (DrawPublishConfig())
+            {
+                GUILayout.Space(10);
+            }
 
             if (GUILayout.Button("Publish", GUILayout.Height(24)))
             {
@@ -194,6 +201,22 @@ namespace NpmPublisherSupport
                 //
                 UpmClientUtils.ListPackages(() => Refresh(false));
             });
+        }
+
+        private bool DrawPublishConfig()
+        {
+            if (!string.IsNullOrWhiteSpace(package.publishConfig.registry))
+            {
+                GUILayout.Label("Publish Config Overrides", EditorStyles.boldLabel);
+                using (new GUILayout.VerticalScope(Styles.BigTitle))
+                {
+                    GUILayout.Label($"Registry: {package.publishConfig.registry}", EditorStyles.largeLabel);
+                }
+
+                return true;
+            }
+
+            return false;
         }
 
         private void DrawContentPackageJson()
@@ -343,12 +366,12 @@ namespace NpmPublisherSupport
             GUILayout.EndHorizontal();
         }
 
-        private void DrawPackageExternalLoaders()
+        private bool DrawPackageExternalLoaders()
         {
             const string NpmPackageLoader = "com.codewriter.npm-package-loader";
 
             if (packageExternalLoaders.Count == 0)
-                return;
+                return false;
 
             GUILayout.Label("External loaders", EditorStyles.boldLabel);
 
@@ -383,6 +406,8 @@ namespace NpmPublisherSupport
             }
 
             GUILayout.EndVertical();
+
+            return true;
         }
 
         private void UpdateVersion(NpmVersion version)
