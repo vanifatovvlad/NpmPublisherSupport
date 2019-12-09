@@ -19,7 +19,7 @@ Npm Package Loader позволяет архивировать часть асс
 Может выглядеть примерно так:
 ```
 {
-  "name": "com.greenbuttongames.npm-package-loader-demo-sdk",
+  "name": "com.codewriter.npm-package-loader-demo-sdk",
   "displayName": "Npm Package Loader DEMO",
   "description": "Do not use",
   "version": "0.1.0",

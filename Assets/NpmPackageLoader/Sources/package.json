@@ -1,5 +1,5 @@
 {
-  "name": "com.greenbuttongames.npm-package-loader",
+  "name": "com.codewriter.npm-package-loader",
   "displayName": "Npm Package Loader",
   "description": "External dependencies downloader for npm packages",
   "version": "0.2.3",

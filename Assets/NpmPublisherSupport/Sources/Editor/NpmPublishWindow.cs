@@ -345,7 +345,7 @@ namespace NpmPublisherSupport
 
         private void DrawPackageExternalLoaders()
         {
-            const string NpmPackageLoader = "com.greenbuttongames.npm-package-loader";
+            const string NpmPackageLoader = "com.codewriter.npm-package-loader";
 
             if (packageExternalLoaders.Count == 0)
                 return;
@@ -381,9 +381,6 @@ namespace NpmPublisherSupport
             {
                 EditorGUILayout.ObjectField(loader, typeof(Loader), false);
             }
-
-            //     "com.greenbuttongames.npm-package-loader": "0.1.9"
-
 
             GUILayout.EndVertical();
         }

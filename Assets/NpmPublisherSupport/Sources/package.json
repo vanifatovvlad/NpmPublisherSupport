@@ -2,7 +2,7 @@
   "name": "com.codewriter.npm-publisher-support",
   "displayName": "Npm Publisher Support",
   "description": "Publish Npm packages to your registry directly from the Unity",
-  "version": "0.5.3",
+  "version": "0.5.4",
   "unity": "2018.3",
   "license": "MIT",
   "author": "Vanifatov Vlad (https://github.com/vanifatovvlad)",
@@ -17,7 +17,7 @@
     "tool"
   ],
   "dependencies": {
-    "com.greenbuttongames.npm-package-loader": "0.2.3",
+    "com.codewriter.npm-package-loader": "0.2.3",
     "com.unity.editorcoroutines": "0.0.2-preview.1"
   }
 }
