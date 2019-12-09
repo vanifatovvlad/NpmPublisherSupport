@@ -52,6 +52,27 @@ Assets/
 [![](https://user-images.githubusercontent.com/26966368/54920271-e1a26500-4f13-11e9-9040-12244318f78d.png)](#)
 #### Step 3. Publish
 
+### Npm package
+[![NPM](https://nodei.co/npm/com.codewriter.npm-publisher-support.png)](https://www.npmjs.com/package/com.codewriter.npm-publisher-support)
+
+Npm package is available at [npmjs.com](https://www.npmjs.com/package/com.codewriter.npm-publisher-support). To use it, add the following line to dependencies section of your `manifest.json`. Unity should download and link the package automatically:
+```json
+{
+  "scopedRegistries": [
+    {
+      "name": "CodeWriter",
+      "url": "https://registry.npmjs.org/",
+      "scopes": [
+        "com.codewriter"
+      ]
+    }
+  ],
+  "dependencies": {
+    "com.codewriter.npm-publisher-support": "0.5.6"
+  }
+}
+```
+
 ### README Badge
 
 Using NPM Publisher Support? Add a README badge to show it off: [![NPM Publisher Support](https://img.shields.io/badge/maintained%20with-NPM%20Publisher%20Support-blue.svg)](https://github.com/vanifatovvlad/NpmPublisherSupport)

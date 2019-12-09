@@ -7,5 +7,8 @@
   "license": "MIT",
   "author": "Vanifatov Vlad (https://github.com/vanifatovvlad)",
   "homepage": "https://github.com/vanifatovvlad/NpmPublisherSupport#readme",
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org/"
+  },
   "dependencies": {}
 }
