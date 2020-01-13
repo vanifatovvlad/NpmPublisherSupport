@@ -25,7 +25,7 @@ namespace NpmPublisherSupport
             window.Show();
         }
 
-        internal static string Registry
+        public static string Registry
         {
             get => EditorPrefs.GetString("codewriter.npm-publisher-support.registry", "");
             set => EditorPrefs.SetString("codewriter.npm-publisher-support.registry", value);
