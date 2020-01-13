@@ -10,7 +10,7 @@ using Object = UnityEngine.Object;
 
 namespace NpmPublisherSupport
 {
-    internal static class NpmPublishMenu
+    public static class NpmPublishMenu
     {
         private const string PublishMenuItemPath = "Assets/View Npm Package";
 
@@ -60,9 +60,31 @@ namespace NpmPublisherSupport
             EditorCoroutineUtility.StartCoroutineOwnerless(PublishModifiedRoutine());
         }
 
-        public static IEnumerator PublishModifiedRoutine()
+        public static Dictionary<TextAsset, Package> GetAllLocalPackages()
         {
             var toPublish = new Dictionary<TextAsset, Package>();
+
+            try
+            {
+                var locals = UpmClientUtils.FindLocalPackages();
+                foreach (var localAsset in locals)
+                {
+                    var local    = JsonUtility.FromJson<Package>(localAsset.text);
+                    toPublish.Add(localAsset, local);
+                }
+            }
+            finally
+            {
+                EditorUtility.ClearProgressBar();
+            }
+
+            return toPublish;
+        }
+        
+        public static Dictionary<TextAsset, Package> GetModifiedPackages()
+        {
+            var toPublish = new Dictionary<TextAsset, Package>();
+            var localPackages = GetAllLocalPackages();
 
             try
             {
@@ -76,20 +98,14 @@ namespace NpmPublisherSupport
                         : counter % 3 == 1 ? "Collecting info.."
                         : "Collecting info...";
                     EditorUtility.DisplayProgressBar("NPM Publish", label, 1f);
-                    yield return null;
                 }
 
-                var locals = UpmClientUtils.FindLocalPackages();
-
-                foreach (var localAsset in locals)
-                {
-                    var local = JsonUtility.FromJson<Package>(localAsset.text);
-                    var searched = search.Result.FirstOrDefault(o => o.name == local.name);
-
-                    if (searched == null || searched.versions.latest == local.version)
+                foreach (var localAsset in localPackages) {
+                    var package = localAsset.Value;
+                    var searched = search.Result.FirstOrDefault(o => o.name == package.name);
+                    if (searched == null || searched.versions.latest == package.version)
                         continue;
-
-                    toPublish.Add(localAsset, local);
+                    toPublish.Add(localAsset.Key, package);
                 }
             }
             finally
@@ -97,6 +113,20 @@ namespace NpmPublisherSupport
                 EditorUtility.ClearProgressBar();
             }
 
+            return toPublish;
+        }
+
+        
+        public static IEnumerator PublishModifiedRoutine()
+        {
+            var toPublish = GetModifiedPackages();
+
+            yield return PublishPackages(toPublish);
+            
+        }
+
+        public static IEnumerator PublishPackages(IDictionary<TextAsset,Package> toPublish)
+        {
             var nl = Environment.NewLine;
             var message = $"Following packages would be published:" +
                           toPublish.Aggregate("", (s, c) => s + $"{nl} - {c.Value.name}: {c.Value.version}");
@@ -133,7 +163,7 @@ namespace NpmPublisherSupport
                 EditorUtility.ClearProgressBar();
             }
         }
-
+        
         /*
         public static IEnumerator PublishAll(List<TextAsset> assets)
         {
@@ -169,6 +199,7 @@ namespace NpmPublisherSupport
         }
         */
 
+        
         public static TextAsset GetSelectedPackageJson()
         {
             var selected = Selection.activeObject;

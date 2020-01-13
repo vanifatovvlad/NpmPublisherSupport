@@ -6,7 +6,7 @@ namespace NpmPublisherSupport
 {
     public delegate void NpmCommandCallback(int? code, string result);
 
-    internal static class NpmUtils
+    public static class NpmUtils
     {
         private static readonly StringBuilder Error = new StringBuilder();
         private static readonly StringBuilder Output = new StringBuilder();
