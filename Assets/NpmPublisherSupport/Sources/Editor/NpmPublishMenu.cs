@@ -3,9 +3,11 @@ using System.Collections;
 using System.Collections.Generic;
 using Unity.EditorCoroutines.Editor;
 using System.Linq;
+using MiniJSON;
 using UnityEditor;
 using UnityEditor.PackageManager;
 using UnityEngine;
+using UnityEngine.Networking;
 using Object = UnityEngine.Object;
 
 namespace NpmPublisherSupport
@@ -69,7 +71,7 @@ namespace NpmPublisherSupport
                 var locals = UpmClientUtils.FindLocalPackages();
                 foreach (var localAsset in locals)
                 {
-                    var local    = JsonUtility.FromJson<Package>(localAsset.text);
+                    var local = JsonUtility.FromJson<Package>(localAsset.text);
                     toPublish.Add(localAsset, local);
                 }
             }
@@ -80,7 +82,7 @@ namespace NpmPublisherSupport
 
             return toPublish;
         }
-        
+
         public static Dictionary<TextAsset, Package> GetModifiedPackages()
         {
             var toPublish = new Dictionary<TextAsset, Package>();
@@ -100,7 +102,8 @@ namespace NpmPublisherSupport
                     EditorUtility.DisplayProgressBar("NPM Publish", label, 1f);
                 }
 
-                foreach (var localAsset in localPackages) {
+                foreach (var localAsset in localPackages)
+                {
                     var package = localAsset.Value;
                     var searched = search.Result.FirstOrDefault(o => o.name == package.name);
                     if (searched == null || searched.versions.latest == package.version)
@@ -116,16 +119,79 @@ namespace NpmPublisherSupport
             return toPublish;
         }
 
-        
-        public static IEnumerator PublishModifiedRoutine()
+        public static IEnumerable FetchModifiedPackagesRoutine(string registry,
+            Dictionary<TextAsset, Package> resultPackages)
         {
-            var toPublish = GetModifiedPackages();
+            if (!registry.EndsWith("/")) registry += "/";
 
-            yield return PublishPackages(toPublish);
-            
+            var header = $"Npm: {registry}";
+            var localPackages = GetAllLocalPackages();
+
+            try
+            {
+                int progressIndex = 0;
+                foreach (var localAsset in localPackages)
+                {
+                    var package = localAsset.Value;
+
+                    EditorUtility.DisplayProgressBar(header, package.name,
+                        1f * ++progressIndex / localPackages.Count);
+
+                    var request = UnityWebRequest.Get(registry + package.name);
+                    request.SendWebRequest();
+                    while (!request.isDone)
+                    {
+                        yield return null;
+                    }
+
+                    try
+                    {
+                        if (request.responseCode == 200 &&
+                            request.downloadHandler.text is string responseText &&
+                            Json.Deserialize(responseText) is Dictionary<string, object> json &&
+                            json.TryGetValue("dist-tags", out var distTagsObject) &&
+                            distTagsObject is Dictionary<string, object> distTags &&
+                            distTags.TryGetValue("latest", out var latestObject) &&
+                            latestObject is string latest &&
+                            latest != package.version)
+                        {
+                            resultPackages.Add(localAsset.Key, package);
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        Debug.LogError($"Failed to fetch {request.url}");
+                        Debug.LogException(e);
+                    }
+                }
+            }
+            finally
+            {
+                EditorUtility.ClearProgressBar();
+            }
         }
 
-        public static IEnumerator PublishPackages(IDictionary<TextAsset,Package> toPublish)
+        public static IEnumerator PublishModifiedRoutine()
+        {
+            var toPublish = new Dictionary<TextAsset, Package>();
+            var registry = NpmPublishPreferences.Registry;
+
+            foreach (var entry in FetchModifiedPackagesRoutine(registry, toPublish))
+            {
+                yield return entry;
+            }
+
+            if (toPublish.Count == 0)
+            {
+                var title = $"Npm: {registry}";
+                EditorUtility.DisplayDialog(title, "No modified packages found", "Close");
+                yield break;
+            }
+
+            yield return PublishPackages(toPublish);
+        }
+
+        public static IEnumerator PublishPackages(IDictionary<TextAsset, Package> toPublish)
         {
             var nl = Environment.NewLine;
             var message = $"Following packages would be published:" +
@@ -154,7 +220,7 @@ namespace NpmPublisherSupport
                     {
                         yield return null;
                     }
-                    
+
                     Debug.Log("OK " + asset.Key);
                 }
             }
@@ -163,7 +229,7 @@ namespace NpmPublisherSupport
                 EditorUtility.ClearProgressBar();
             }
         }
-        
+
         /*
         public static IEnumerator PublishAll(List<TextAsset> assets)
         {
@@ -199,7 +265,7 @@ namespace NpmPublisherSupport
         }
         */
 
-        
+
         public static TextAsset GetSelectedPackageJson()
         {
             var selected = Selection.activeObject;
