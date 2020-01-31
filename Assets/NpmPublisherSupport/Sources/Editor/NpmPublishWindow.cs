@@ -5,7 +5,6 @@ using System.Linq;
 using NpmPackageLoader;
 using UnityEditor;
 using UnityEditor.PackageManager;
-using UnityEditor.PackageManager.Requests;
 using UnityEngine;
 
 namespace NpmPublisherSupport
@@ -15,6 +14,8 @@ namespace NpmPublisherSupport
         private static readonly GUIContent PatchDependentContent = new GUIContent("Patch Dependent",
             "If on, version of dependant packages in this project will be automatically Patched");
 
+        public static string Registry => NpmPublishPreferences.Registry;
+
         public static void OpenPublish(TextAsset packageJson)
         {
             var window = GetWindow<NpmPublishWindow>();
@@ -23,18 +24,6 @@ namespace NpmPublisherSupport
             window.packageAsset = packageJson;
             window.RefreshImmediate(false);
             window.Show();
-        }
-
-        public static string Registry
-        {
-            get => EditorPrefs.GetString("codewriter.npm-publisher-support.registry", "");
-            set => EditorPrefs.SetString("codewriter.npm-publisher-support.registry", value);
-        }
-
-        internal static bool UpdateVersionRecursively
-        {
-            get => EditorPrefs.GetInt("codewriter.npm-publisher-support.update-recursively", 1) == 1;
-            set => EditorPrefs.SetInt("codewriter.npm-publisher-support.update-recursively", value ? 1 : 0);
         }
 
         [SerializeField] private TextAsset packageAsset;
@@ -80,13 +69,10 @@ namespace NpmPublisherSupport
         {
             user = string.Empty;
             userFetched = true;
-            NpmUtils.ExecuteNpmCommand($"whoami --registry {Registry}", (code, result) =>
-            {
-                if (code == 0)
-                {
-                    user = result.Trim();
-                }
 
+            NpmCommands.WhoAmI(Registry, currentUser =>
+            {
+                user = currentUser;
                 Refresh(false);
             });
         }
@@ -104,7 +90,9 @@ namespace NpmPublisherSupport
 
         private void OnDisable()
         {
+            // ReSharper disable once DelegateSubtraction
             Selection.selectionChanged -= OnSelectionChanged;
+            // ReSharper disable once DelegateSubtraction
             NpmPublishAssetProcessor.PackageImported -= PackageImported;
         }
 
@@ -193,8 +181,9 @@ namespace NpmPublisherSupport
 
         private void DoPublish()
         {
+            var header = $"Npm: {Registry}";
             var msg = $"Are you really want to publish package {package.name}: {package.version}?";
-            if (!EditorUtility.DisplayDialog("Npm", msg, "Publish", "Cancel")) return;
+            if (!EditorUtility.DisplayDialog(header, msg, "Publish", "Cancel")) return;
 
             NpmPublishCommand.Execute(packageAsset, () =>
             {
@@ -354,8 +343,8 @@ namespace NpmPublisherSupport
 
                 GUILayout.Space(5);
 
-                UpdateVersionRecursively =
-                    GUILayout.Toggle(UpdateVersionRecursively, PatchDependentContent, EditorStyles.toggle);
+                NpmPublishPreferences.UpdateVersionRecursively = GUILayout.Toggle(
+                    NpmPublishPreferences.UpdateVersionRecursively, PatchDependentContent, EditorStyles.toggle);
 
                 GUILayout.FlexibleSpace();
             }
@@ -368,30 +357,30 @@ namespace NpmPublisherSupport
 
         private bool DrawPackageExternalLoaders()
         {
-            const string NpmPackageLoader = "com.codewriter.npm-package-loader";
+            var npmPackageLoader = NpmPublishPreferences.NpmPackageLoader;
 
             if (packageExternalLoaders.Count == 0)
                 return false;
 
             GUILayout.Label("External loaders", EditorStyles.boldLabel);
 
-            var loaderPackageVersion = NpmCommands.GetDependencyVersion(packageAsset, NpmPackageLoader);
+            var loaderPackageVersion = NpmCommands.GetDependencyVersion(packageAsset, npmPackageLoader);
 
             if (loaderPackageVersion == null)
             {
-                var version = UpmClientUtils.GetPackageVersion(NpmPackageLoader, PackageVersionType.UpmLatest);
+                var version = UpmClientUtils.GetPackageVersion(npmPackageLoader, PackageVersionType.UpmLatest);
 
                 if (string.IsNullOrEmpty(version))
                 {
-                    version = UpmClientUtils.GetPackageVersion(NpmPackageLoader, PackageVersionType.Local);
+                    version = UpmClientUtils.GetPackageVersion(npmPackageLoader, PackageVersionType.Local);
                 }
 
                 GUILayout.Space(10);
                 GUILayout.BeginHorizontal();
-                EditorGUILayout.HelpBox($"Missing {NpmPackageLoader}:{version} dependency", MessageType.Error);
+                EditorGUILayout.HelpBox($"Missing {npmPackageLoader}:{version} dependency", MessageType.Error);
                 if (GUILayout.Button("Add", GUILayout.Height(40)))
                 {
-                    NpmCommands.SetDependencyVersion(packageAsset, NpmPackageLoader, version);
+                    NpmCommands.SetDependencyVersion(packageAsset, npmPackageLoader, version);
                     Refresh(true);
                 }
 
@@ -412,7 +401,7 @@ namespace NpmPublisherSupport
 
         private void UpdateVersion(NpmVersion version)
         {
-            if (UpdateVersionRecursively)
+            if (NpmPublishPreferences.UpdateVersionRecursively)
             {
                 NpmCommands.UpdateVersionRecursively(packageAsset, version);
             }
@@ -458,15 +447,29 @@ namespace NpmPublisherSupport
         {
             using (new GUILayout.HorizontalScope(EditorStyles.toolbar))
             {
-                GUILayout.Label("Registry", EditorStyles.toolbarButton);
-                GUILayout.Label(Registry, EditorStyles.toolbarButton);
-                if (GUILayout.Button("Edit", EditorStyles.toolbarButton))
+                var registries = NpmPublishPreferences.AllRegistries;
+                var registryIndex = Array.IndexOf(registries, Registry);
+
+                var registryContent = new GUIContent(Registry);
+                var registriesDropDownSize = EditorStyles.toolbarDropDown.CalcSize(registryContent);
+                var newRegistryIndex = EditorGUILayout.Popup(registryIndex,
+                    NpmPublishPreferences.EscapedAllRegistries, EditorStyles.toolbarDropDown,
+                    GUILayout.Width(registriesDropDownSize.x));
+
+                if (newRegistryIndex != registryIndex && newRegistryIndex != -1)
                 {
-                    Registry = string.Empty;
+                    NpmPublishPreferences.Registry = registries[newRegistryIndex];
                     userFetched = false;
                     user = string.Empty;
                     RefreshImmediate(false);
-                    return;
+                }
+
+                if (GUILayout.Button("Edit", EditorStyles.toolbarButton))
+                {
+                    NpmPublishPreferences.Registry = string.Empty;
+                    userFetched = false;
+                    user = string.Empty;
+                    RefreshImmediate(false);
                 }
 
                 GUILayout.FlexibleSpace();
@@ -487,13 +490,30 @@ namespace NpmPublisherSupport
                 GUILayout.Space(10);
                 GUILayout.Label("Registry:");
                 registryInput = GUILayout.TextField(registryInput, GUILayout.MaxWidth(600)).Trim();
+
+                var valid = true;
+                if (string.IsNullOrEmpty(registryInput))
+                {
+                    var rect = GUILayoutUtility.GetLastRect();
+                    GUI.Label(rect, " http://registry.npmjs.org/", Styles.LeftGrayLabel);
+
+                    EditorGUILayout.HelpBox("Registry must not be empty", MessageType.Error);
+                    valid = false;
+                }
+                else if (!registryInput.StartsWith("http://") && !registryInput.StartsWith("https://"))
+                {
+                    EditorGUILayout.HelpBox("Registry URL must starts with http://", MessageType.Error);
+                    valid = false;
+                }
+
                 GUILayout.Space(10);
                 using (new GUILayout.HorizontalScope())
+                using (new EditorGUI.DisabledScope(!valid))
                 {
                     GUILayout.FlexibleSpace();
                     if (GUILayout.Button("Confirm", GUILayout.Width(180), GUILayout.Height(24)))
                     {
-                        Registry = registryInput;
+                        NpmPublishPreferences.Registry = registryInput;
                         registryInput = string.Empty;
                     }
 
@@ -568,12 +588,7 @@ namespace NpmPublisherSupport
 
         void IHasCustomMenu.AddItemsToMenu(GenericMenu menu)
         {
-            menu.AddItem(new GUIContent("Change Registry"), false, Logout);
-        }
-
-        private void Logout()
-        {
-            Registry = string.Empty;
+            //menu.AddItem(new GUIContent("Change Registry"), false, Logout);
         }
     }
 }

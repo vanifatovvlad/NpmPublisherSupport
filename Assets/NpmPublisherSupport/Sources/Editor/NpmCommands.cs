@@ -16,6 +16,21 @@ namespace NpmPublisherSupport
 
     public class NpmCommands
     {
+        public static void WhoAmI(string registry, Action<string> callback)
+        {
+            NpmUtils.ExecuteNpmCommand($"whoami --registry {registry}", (code, result) =>
+            {
+                if (code == 0)
+                {
+                    callback(result.Trim());
+                }
+                else
+                {
+                    callback(null);
+                }
+            });
+        }
+        
         public static void Publish(NpmCommandCallback action, string registry)
         {
             if (string.IsNullOrEmpty(registry))

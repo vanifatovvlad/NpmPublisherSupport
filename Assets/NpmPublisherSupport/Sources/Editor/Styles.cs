@@ -10,6 +10,7 @@ namespace NpmPublisherSupport
         public static readonly GUIStyle HeaderVersionLabel;
         public static readonly GUIStyle CenteredLargeLabel;
         public static readonly GUIStyle RightGrayLabel;
+        public static readonly GUIStyle LeftGrayLabel;
         public static readonly GUIStyle BigTitle;
         public static readonly GUIStyle BigTitleWithPadding;
         public static readonly GUIStyle RichNoPaddingLabel;
@@ -53,6 +54,12 @@ namespace NpmPublisherSupport
             {
                 fontSize = 9,
                 alignment = TextAnchor.MiddleRight,
+            };
+
+            LeftGrayLabel = new GUIStyle(EditorStyles.centeredGreyMiniLabel)
+            {
+                fontSize = 9,
+                alignment = TextAnchor.MiddleLeft,
             };
 
             RichNoPaddingLabel = new GUIStyle(GUI.skin.label)
