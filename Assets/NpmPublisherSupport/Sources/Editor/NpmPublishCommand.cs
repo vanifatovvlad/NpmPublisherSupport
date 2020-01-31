@@ -11,7 +11,27 @@ namespace NpmPublisherSupport
     {
         public static void Execute(TextAsset packageJsonAsset, Action callback)
         {
+            Execute(packageJsonAsset, callback, new NpmPublishCommandOptions
+            {
+                CopyDocumentation = true,
+                CopySamples = true,
+            });
+        }
+
+        public static void Execute(TextAsset packageJsonAsset, Action callback,
+            NpmPublishCommandOptions options)
+        {
             NpmCommands.SetWorkingDirectory(packageJsonAsset);
+
+            if (options.CopyDocumentation)
+            {
+                CopyDirectoryIfExists(packageJsonAsset, "Documentation", "Documentation~");
+            }
+
+            if (options.CopySamples)
+            {
+                CopyDirectoryIfExists(packageJsonAsset, "Samples", "Samples~");
+            }
 
             var packageJsonPath = AssetDatabase.GetAssetPath(packageJsonAsset);
             var packageExternalLoaders = AssetDatabase
@@ -39,5 +59,24 @@ namespace NpmPublisherSupport
 
             Step(0);
         }
+
+        private static void CopyDirectoryIfExists(TextAsset packageJsonAsset, string src, string dst)
+        {
+            var packageDirectory = NpmCommands.GetPackageDirectory(packageJsonAsset);
+
+            var documentationSrcPath = packageDirectory + src;
+            var documentationDstPath = packageDirectory + dst;
+
+            if (Directory.Exists(documentationSrcPath))
+            {
+                FileUtil.ReplaceDirectory(documentationSrcPath, documentationDstPath);
+            }
+        }
+    }
+
+    public struct NpmPublishCommandOptions
+    {
+        public bool CopySamples;
+        public bool CopyDocumentation;
     }
 }
