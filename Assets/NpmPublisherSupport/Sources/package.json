@@ -16,9 +16,6 @@
     "editor-extension",
     "tool"
   ],
-  "publishConfig": {
-    "registry": "https://registry.npmjs.org/"
-  },
   "dependencies": {
     "com.codewriter.npm-package-loader": "0.2.3",
     "com.unity.editorcoroutines": "0.0.2-preview.1"
