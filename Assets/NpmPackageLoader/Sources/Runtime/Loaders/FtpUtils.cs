@@ -1,5 +1,6 @@
 #if UNITY_EDITOR
 using System;
+using System.IO;
 using System.Net;
 using UnityEditor;
 using UnityEngine;
@@ -35,6 +36,14 @@ namespace NpmPackageLoader
                 var remoteFile = new Uri($"{remoteVersionDir}/{data.UnityPackageName}.unitypackage");
 
                 var localFile = data.LocalFile;
+                var localFileInfo = new FileInfo(localFile);
+                if (!localFileInfo.Exists)
+                {
+                    Debug.LogError($"{localFile} not exists");
+                    fail();
+                }
+
+                var totalBytes = localFileInfo.Length;
 
                 EditorUtility.DisplayProgressBar(progressHeader, remoteVersionDir, 0f);
 
@@ -45,8 +54,10 @@ namespace NpmPackageLoader
 
                 _request.UploadProgressChanged += (sender, args) =>
                 {
-                    EditorUtility.DisplayProgressBar(progressHeader, ToKiloBytes(args.BytesSent),
-                        args.ProgressPercentage / 100f);
+                    var send = args.BytesSent;
+                    var info = $"{ToHumanSize(send)} / {ToHumanSize(totalBytes)}";
+                    var progress = 1f * send / totalBytes;
+                    EditorUtility.DisplayProgressBar(progressHeader, info, progress);
                 };
 
                 _request.UploadFileCompleted += (sender, args) =>
@@ -90,13 +101,18 @@ namespace NpmPackageLoader
                 var localFile = data.LocalFile;
                 var remoteVersionDir = $"{data.Url}/{data.PackageName}/{data.PackageVersion}/";
                 var remoteFile = new Uri($"{remoteVersionDir}/{data.UnityPackageName}.unitypackage");
+                var credentials = new NetworkCredential(data.User, data.Password);
+
+                var totalBytes = FetchFileSize(remoteFile, credentials);
 
                 _request = new WebClient();
 
                 _request.DownloadProgressChanged += (sender, args) =>
                 {
-                    EditorUtility.DisplayProgressBar(progressHeader, ToKiloBytes(args.BytesReceived),
-                        args.ProgressPercentage / 100f);
+                    var received = args.BytesReceived;
+                    var info = $"{ToHumanSize(received)} / {ToHumanSize(totalBytes)}";
+                    var progress = 1f * received / totalBytes;
+                    EditorUtility.DisplayProgressBar(progressHeader, info, progress);
                 };
 
                 _request.DownloadFileCompleted += (sender, args) =>
@@ -118,7 +134,7 @@ namespace NpmPackageLoader
                     }
                 };
 
-                _request.Credentials = new NetworkCredential(data.User, data.Password);
+                _request.Credentials = credentials;
                 _request.DownloadFileAsync(remoteFile, localFile);
             }
             catch (Exception ex)
@@ -128,6 +144,28 @@ namespace NpmPackageLoader
                 _request?.Dispose();
                 fail();
             }
+        }
+
+        private static long FetchFileSize(Uri url, NetworkCredential credential)
+        {
+            long bytesTotal = 0;
+
+            try
+            {
+                var request = (FtpWebRequest) WebRequest.Create(url);
+                request.Method = WebRequestMethods.Ftp.GetFileSize;
+                request.Credentials = credential;
+                var response = (FtpWebResponse) request.GetResponse();
+
+                bytesTotal = response.ContentLength;
+                response.Close();
+            }
+            catch (Exception e)
+            {
+                Debug.LogException(e);
+            }
+
+            return Math.Max(bytesTotal, 1);
         }
 
         private static void CreateDirectoryIfNotExists(string url, FtpData data)
@@ -149,9 +187,11 @@ namespace NpmPackageLoader
             }
         }
 
-        private static string ToKiloBytes(long bytes)
+        private static string ToHumanSize(long bytes)
         {
-            return (bytes / 1024) + "Kb";
+            if (bytes > 1024 * 1024) return (bytes / 1024 / 1024) + " Mb";
+            if (bytes > 1024) return (bytes / 1024) + " Kb";
+            return bytes + " b";
         }
     }
 }
