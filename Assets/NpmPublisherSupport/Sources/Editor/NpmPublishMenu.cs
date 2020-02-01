@@ -197,7 +197,8 @@ namespace NpmPublisherSupport
             var message = $"Following packages would be published:" +
                           toPublish.Aggregate("", (s, c) => s + $"{nl} - {c.Value.name}: {c.Value.version}");
 
-            if (!EditorUtility.DisplayDialog("Publish?", message, "Publish", "Cancel"))
+            var header = $"Npm {NpmPublishPreferences.Registry}";
+            if (!EditorUtility.DisplayDialog(header, message, "Publish", "Cancel"))
             {
                 yield break;
             }
