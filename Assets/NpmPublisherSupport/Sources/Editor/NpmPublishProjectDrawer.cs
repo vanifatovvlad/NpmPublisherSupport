@@ -1,5 +1,3 @@
-using System.Collections.Generic;
-
 namespace NpmPublisherSupport
 {
     using UnityEditor;
@@ -8,8 +6,6 @@ namespace NpmPublisherSupport
     [InitializeOnLoad]
     public static class NpmPublishProjectDrawer
     {
-        private static List<string> _paths = new List<string>();
-
         static NpmPublishProjectDrawer()
         {
             EditorApplication.projectWindowItemOnGUI += ProjectWindowItemOnGUI;
@@ -24,24 +20,13 @@ namespace NpmPublisherSupport
             var packageJson = NpmPublishMenu.GetPackageJson(path);
             if (packageJson == null)
             {
-                _paths.Remove(path);
                 return;
             }
 
-            if (!path.EndsWith("/"))
+            var rootFolderPath = NpmPublishMenu.GetPackageRootFolder(packageJson);
+            if (rootFolderPath != path)
             {
-                path += "/";
-            }
-
-            foreach (var existsPath in _paths)
-            {
-                if (path.Length != existsPath.Length && path.StartsWith(existsPath))
-                    return;
-            }
-
-            if (!_paths.Contains(path))
-            {
-                _paths.Add(path);
+                return;
             }
 
             var rect = new Rect(selectionRect)

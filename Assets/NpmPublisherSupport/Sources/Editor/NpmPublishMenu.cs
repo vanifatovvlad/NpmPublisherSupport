@@ -322,5 +322,28 @@ namespace NpmPublisherSupport
 
             return null;
         }
+        
+        public static string GetPackageRootFolder(TextAsset packageJsonAsset)
+        {
+            var path = AssetDatabase.GetAssetPath(packageJsonAsset);
+            while (true)
+            {
+                var index = path.LastIndexOf('/');
+                if (index == -1)
+                {
+                    return path;
+                }
+
+                var folder = path.Substring(0, index);
+                if (GetPackageJson(folder) == packageJsonAsset)
+                {
+                    path = folder;
+                }
+                else
+                {
+                    return path;
+                }
+            }
+        }
     }
 }
