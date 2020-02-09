@@ -13,7 +13,12 @@ namespace NpmPublisherSupport
     {
         private static readonly List<int> TreeEmptySelection = new List<int>();
 
-        private TreeViewState _treeViewState;
+        [SerializeField]
+        private bool compactMode = false;
+
+        [SerializeField]
+        private TreeViewState treeViewState;
+
         private PackageTreeView _treeView;
 
         [MenuItem("Window/Npm/Packages Window", priority = 499)]
@@ -24,6 +29,16 @@ namespace NpmPublisherSupport
             window.Show();
         }
 
+        private void OnEnable()
+        {
+            NpmPublishAssetProcessor.PackageImported += PackageImported;
+        }
+
+        private void OnDisable()
+        {
+            NpmPublishAssetProcessor.PackageImported -= PackageImported;
+        }
+
         private void OnLostFocus()
         {
             _treeView?.SetSelection(TreeEmptySelection);
@@ -31,11 +46,11 @@ namespace NpmPublisherSupport
 
         private void OnGUI()
         {
-            if (_treeViewState == null)
-                _treeViewState = new TreeViewState();
+            if (treeViewState == null)
+                treeViewState = new TreeViewState();
 
             if (_treeView == null)
-                _treeView = new PackageTreeView(_treeViewState, OnTreeSelectionChanged);
+                _treeView = new PackageTreeView(treeViewState);
 
             using (new EditorGUI.DisabledScope(EditorApplication.isCompiling))
             {
@@ -46,15 +61,30 @@ namespace NpmPublisherSupport
 
         private void DrawToolbar()
         {
+            var expand = GUILayout.ExpandWidth(true);
+            var noExpand = GUILayout.ExpandWidth(false);
+
             using (new GUILayout.HorizontalScope(EditorStyles.toolbar))
             {
-                if (GUILayout.Button("Refresh", EditorStyles.toolbarButton))
+                if (GUILayout.Button("Refresh", EditorStyles.toolbarButton, noExpand))
                 {
+                    _treeView.searchString = "";
                     _treeView.Reload();
-                    Repaint();
                 }
 
-                GUILayout.FlexibleSpace();
+                var search = EditorGUILayout.TextField(_treeView.searchString, EditorStyles.toolbarSearchField, expand);
+                if (search != _treeView.searchString)
+                {
+                    _treeView.searchString = search;
+                    _treeView.Reload();
+                }
+
+                compactMode = GUILayout.Toggle(compactMode, "Compact", EditorStyles.toolbarButton, noExpand);
+                if (compactMode != _treeView.CompactMode)
+                {
+                    _treeView.SetCompactMode(compactMode);
+                    _treeView.Repaint();
+                }
             }
         }
 
@@ -65,8 +95,9 @@ namespace NpmPublisherSupport
             _treeView.OnGUI(rect);
         }
 
-        private void OnTreeSelectionChanged()
+        private void PackageImported()
         {
+            _treeView.Reload();
             Repaint();
         }
 
@@ -75,46 +106,59 @@ namespace NpmPublisherSupport
             private const string NpmMenuItemPrefix = "Assets/NPM/";
             private static readonly List<PackageMenuItem> PackageMenuItems;
 
-            private readonly Action _onSelectionChanged;
+            public bool CompactMode { get; private set; }
 
             static PackageTreeView()
             {
+                var flags = BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic;
+
                 PackageMenuItems = AppDomain.CurrentDomain
                     .GetAssemblies()
                     .SelectMany(asm => asm.GetTypes())
-                    .SelectMany(type =>
-                        type.GetMethods(BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic))
-                    .Where(m => m.GetParameters().Length == 0)
-                    .Where(m =>
+                    .SelectMany(type => type.GetMethods(flags))
+                    .Where(m => m.ReturnType == typeof(void) && m.GetParameters().Length == 0)
+                    .SelectMany(method =>
                     {
-                        var attr = (MenuItem) m.GetCustomAttribute(typeof(MenuItem), false);
-                        return attr != null && !attr.validate && attr.menuItem.StartsWith(NpmMenuItemPrefix);
-                    })
-                    .Select(method =>
-                    {
-                        var attr = (MenuItem) method.GetCustomAttribute(typeof(MenuItem), false);
-                        var menu = attr.menuItem.Substring(NpmMenuItemPrefix.Length);
-                        return new PackageMenuItem {MethodInfo = method, MenuItem = new GUIContent(menu)};
+                        return method.GetCustomAttributes(typeof(MenuItem), false)
+                            .Select(attr => (MenuItem) attr)
+                            .Where(attr => !attr.validate && attr.menuItem.StartsWith(NpmMenuItemPrefix))
+                            .Select(attr =>
+                            {
+                                var menu = attr.menuItem.Substring(NpmMenuItemPrefix.Length);
+                                return new PackageMenuItem {MethodInfo = method, MenuItem = new GUIContent(menu)};
+                            });
                     })
                     .ToList();
             }
 
-            public PackageTreeView(TreeViewState treeViewState, Action onSelectionChanged)
+            public PackageTreeView(TreeViewState treeViewState)
                 : base(treeViewState)
             {
-                _onSelectionChanged = onSelectionChanged;
                 Reload();
+            }
+
+            public void SetCompactMode(bool compact)
+            {
+                CompactMode = compact;
+                RefreshCustomRowHeights();
             }
 
             protected override TreeViewItem BuildRoot()
             {
                 var root = new TreeViewItem {id = -1, depth = -1, displayName = "Root"};
 
-                var index = 0;
-                foreach (var packageAsset in UpmClientUtils.FindLocalPackages())
-                {
-                    root.AddChild(new PackageTreeViewItem(index++, packageAsset));
-                }
+                var search = searchString.ToLower();
+
+                var children = UpmClientUtils.FindLocalPackages()
+                    .Select((packageAsset, index) => new PackageTreeViewItem(index, packageAsset))
+                    .Where(item => MatchSearch(item, search))
+                    .ToList()
+                    .OrderBy(item => item.displayName)
+                    .ToList()
+                    .Select(item => (TreeViewItem) item)
+                    .ToList();
+
+                SetupParentsAndChildrenFromDepths(root, children);
 
                 return root;
             }
@@ -124,14 +168,13 @@ namespace NpmPublisherSupport
                 base.SelectionChanged(selectedIds);
 
                 Selection.objects = selectedIds
-                    .Select(id => rootItem.children[id])
-                    .Select(item => ((PackageTreeViewItem) item).SelectionObject)
+                    .Select(id => (PackageTreeViewItem) FindItem(id, rootItem))
+                    .Select(item => item.SelectionObject)
                     .ToArray();
-
-                _onSelectionChanged?.Invoke();
             }
 
-            protected override float GetCustomRowHeight(int row, TreeViewItem item) => 40;
+            protected override float GetCustomRowHeight(int row, TreeViewItem item) =>
+                CompactMode ? EditorGUIUtility.singleLineHeight : 42;
 
             protected override void RowGUI(RowGUIArgs args)
             {
@@ -143,20 +186,24 @@ namespace NpmPublisherSupport
 
                 var rect = args.rowRect;
 
-                var displayNameContent = new GUIContent(item.Package.displayName);
-                var displayNameSize = Styles.HeaderDisplayNameLabel.CalcSize(displayNameContent);
-                var displayNameRect = new Rect(rect)
+                if (CompactMode)
                 {
-                    width = displayNameSize.x,
-                    height = displayNameSize.y,
-                };
-                GUI.Label(displayNameRect, displayNameContent, Styles.HeaderDisplayNameLabel);
+                    GUI.Label(rect, item.displayName, EditorStyles.largeLabel);
+                    return;
+                }
 
-                var versionRect = new Rect(rect) {x = rect.x + displayNameSize.x};
-                GUI.Label(versionRect, item.Package.version, Styles.HeaderVersionLabel);
+                var nameRect = DrawLabel(rect.x, rect.y, item.Package.displayName, Styles.HeaderDisplayNameLabel);
+                DrawLabel(nameRect.xMax, nameRect.yMin, item.Package.version, Styles.HeaderVersionLabel);
+                DrawLabel(nameRect.xMin, nameRect.yMax - 3, item.Package.name, Styles.HeaderNameLabel);
+            }
 
-                var nameRect = new Rect(rect) {y = rect.y + displayNameSize.y - 3};
-                GUI.Label(nameRect, item.Package.name, EditorStyles.label);
+            private static Rect DrawLabel(float x, float y, string label, GUIStyle style)
+            {
+                var content = new GUIContent(label);
+                var size = style.CalcSize(content);
+                var rect = new Rect {x = x, y = y, width = size.x, height = size.y};
+                GUI.Label(rect, content, style);
+                return rect;
             }
 
             protected override void ContextClicked()
@@ -170,9 +217,16 @@ namespace NpmPublisherSupport
 
                 contextMenu.ShowAsContext();
             }
+
+            private static bool MatchSearch(PackageTreeViewItem item, string searchLower)
+            {
+                if (string.IsNullOrEmpty(searchLower)) return true;
+                return item.Package.name.ToLower().Contains(searchLower) ||
+                       item.Package.displayName.ToLower().Contains(searchLower);
+            }
         }
 
-        private class PackageTreeViewItem : TreeViewItem
+        private sealed class PackageTreeViewItem : TreeViewItem
         {
             public Package Package { get; }
 
@@ -184,6 +238,8 @@ namespace NpmPublisherSupport
 
                 var rootFolderPath = NpmPublishMenu.GetPackageRootFolder(packageJsonAsset);
                 SelectionObject = AssetDatabase.LoadMainAssetAtPath(rootFolderPath);
+
+                displayName = Package.displayName;
             }
         }
 
