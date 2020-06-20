@@ -59,8 +59,9 @@ namespace NpmPublisherSupport
                     var package = JsonUtility.FromJson<Package>(localPackage.text);
                     SetPackageVersion(package.name, PackageVersionType.Local, package.version);
                 }
-                catch (Exception ex)
-                {
+                catch (Exception ex) {
+                    var packageError = $"PACKAGE ERROR: NAME {localPackage?.name} \n VALUE {localPackage?.text}";
+                    Debug.LogError(packageError,localPackage);
                     Debug.LogException(ex);
                 }
             }
