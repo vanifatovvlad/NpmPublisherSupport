@@ -270,7 +270,18 @@ namespace NpmPublisherSupport
         public static TextAsset GetSelectedPackageJson()
         {
             var selected = Selection.activeObject;
-            return GetPackageJson(selected);
+            var package = GetPackageJson(selected);
+            if (package) return package;
+            
+            var selectedItems = Selection.assetGUIDs;
+            foreach (var guid in selectedItems) {
+                var path = AssetDatabase.GUIDToAssetPath(guid);
+                var asset = AssetDatabase.LoadAssetAtPath<Object>(path);
+                package = GetPackageJson(asset);
+                if (package) return package;
+            }
+            
+            return package;
         }
 
         public static TextAsset GetPackageJson(Object obj)
